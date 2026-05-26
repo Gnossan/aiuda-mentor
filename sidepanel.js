@@ -339,9 +339,18 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
     };
 
     const resultat = await chrome.runtime.sendMessage({ type: "SAVE_MENTOR_LOG", entry });
+    console.log("SAVE_MENTOR_LOG resultat:", JSON.stringify(resultat));
 
-    sparaKnapp.textContent = resultat?.id ? "✓" : "✗";
-    sparaKnapp.classList.toggle("aktiv", !!resultat?.id);
+    if (resultat?.id) {
+        sparaKnapp.textContent = "✓";
+        sparaKnapp.classList.add("aktiv");
+    } else {
+        sparaKnapp.textContent = "✗";
+        const fel = resultat?.error || "okänt fel";
+        console.error("Fel vid sparande:", fel);
+        // Visa felet i chatten
+        laggTillBubbla("assistant", `_Kunde inte spara session: ${fel}_`);
+    }
     setTimeout(() => {
         sparaKnapp.textContent = "💾";
         sparaKnapp.disabled = false;
