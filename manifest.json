@@ -23,11 +23,15 @@
         "tabs"
     ],
     "host_permissions": [
+        "https://aiuda-mentor.vercel.app/*",
         "https://annotated-reader-backend.vercel.app/*"
     ],
     "externally_connectable": {
         "ids": ["*"],
-        "matches": ["https://annotated-reader-backend.vercel.app/*"]
+        "matches": [
+            "https://aiuda-mentor.vercel.app/*",
+            "https://annotated-reader-backend.vercel.app/*"
+        ]
     },
     "background": {
         "service_worker": "background.js"
