@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Mono', monospace;
+            font-size: var(--ar-font-size, 13px);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #1a1610;
+            color: #f5f0e8;
+        }
+
+        /* --- Header --- */
+        #header {
+            padding: 10px 16px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        #header-text {
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            opacity: 0.6;
+        }
+
+        #header-knappar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #header-knappar button {
+            background: transparent;
+            border: 1px solid #444;
+            color: #f5f0e8;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 3px 8px;
+            font-size: 11px;
+            opacity: 0.7;
+            line-height: 1;
+            font-family: inherit;
+        }
+
+        #header-knappar button:hover { opacity: 1; }
+        #spara-session, #visa-logg { display: none; }
+        #spara-session.aktiv, #visa-logg.aktiv { border-color: #f0c040; color: #f0c040; opacity: 1; }
+
+        /* --- Projekt-indikator --- */
+        #projekt-indikator {
+            display: none;
+            padding: 8px 16px;
+            background: #1e1a0e;
+            border-bottom: 1px solid #333;
+            font-size: 11px;
+            color: #f0c040;
+            opacity: 0.9;
+            flex-shrink: 0;
+        }
+
+        #projekt-indikator .projekt-namn {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        #projekt-indikator .projekt-fraga {
+            opacity: 0.7;
+            font-size: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* --- Välkomstskärm (inget aktivt projekt) --- */
+        #välkommen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 32px;
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        #välkommen .rubrik {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f0c040;
+        }
+
+        #välkommen .beskrivning {
+            font-size: 12px;
+            line-height: 1.6;
+            opacity: 0.8;
+        }
+
+        #nytt-projekt-knapp {
+            padding: 10px 20px;
+            background: #f0c040;
+            color: #1a1610;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        /* --- Ny frågeställning-panel --- */
+        #ny-fraga-panel {
+            display: none;
+            padding: 16px;
+            background: #2a2218;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        #ny-fraga-panel .rubrik {
+            font-size: 10px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+        }
+
+        #projekt-namn-input {
+            width: 100%;
+            padding: 7px;
+            background: #1a1610;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #f5f0e8;
+            font-size: 12px;
+            font-family: inherit;
+            margin-bottom: 6px;
+        }
+
+        #fraga-input {
+            width: 100%;
+            height: 72px;
+            padding: 7px;
+            background: #1a1610;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #f5f0e8;
+            font-size: 12px;
+            font-family: inherit;
+            resize: none;
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+
+        #projekt-namn-input:focus, #fraga-input:focus { outline: none; border-color: #f0c040; }
+
+        #starta-knapp {
+            width: 100%;
+            padding: 8px;
+            background: #1a1610;
+            color: #f0c040;
+            border: 1px solid #f0c040;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        /* --- Chatt --- */
+        #meddelanden {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .bubbla {
+            padding: 10px 12px;
+            border-radius: 8px;
+            line-height: 1.5;
+            max-width: 90%;
+            white-space: pre-wrap;
+        }
+
+        .bubbla.user { background: #2a2218; align-self: flex-end; }
+        .bubbla.assistant { background: #372d20; align-self: flex-start; }
+
+        /* --- Input --- */
+        #input-area {
+            padding: 12px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        #input {
+            flex: 1;
+            padding: 8px;
+            background: #2a2218;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #f5f0e8;
+            font-size: 13px;
+            font-family: inherit;
+            resize: none;
+            height: 60px;
+        }
+
+        #skicka {
+            padding: 8px 12px;
+            background: #f0c040;
+            color: #1a1610;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            align-self: flex-end;
+            font-family: inherit;
+        }
+
+        #sok-knapp {
+            display: none;
+            padding: 8px 10px;
+            background: #2a2218;
+            color: #f0c040;
+            border: 1px solid #f0c040;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            align-self: flex-end;
+        }
+
+        /* --- Logg-vy --- */
+        #logg-vy {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .logg-entry {
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .logg-entry:last-child { border-bottom: none; }
+        .logg-tidsstampel { font-size: 10px; opacity: 0.45; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+        .logg-fraga { font-size: 11px; color: #f0c040; margin-bottom: 6px; opacity: 0.85; }
+        .logg-sammanfattning { font-size: 12px; line-height: 1.55; margin-bottom: 8px; }
+        .logg-insikter { font-size: 11px; opacity: 0.7; padding-left: 14px; line-height: 1.5; }
+        .logg-nyckelord { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+        .logg-nyckelord span { font-size: 10px; padding: 2px 6px; border-radius: 10px; background: rgba(240,192,64,0.12); color: #f0c040; opacity: 0.8; }
+
+        /* --- Animationer --- */
+        @keyframes studsa {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+            40% { transform: translateY(-5px); opacity: 1; }
+        }
+        .ar-tänker { display: flex; gap: 5px; padding: 10px 12px; align-self: flex-start; }
+        .ar-tänker span { width: 7px; height: 7px; border-radius: 50%; background: #f5f0e8; animation: studsa 1.2s infinite ease-in-out; }
+        .ar-tänker span:nth-child(2) { animation-delay: 0.2s; }
+        .ar-tänker span:nth-child(3) { animation-delay: 0.4s; }
+
+        /* --- Markdown --- */
+        .bubbla h1, .bubbla h2, .bubbla h3 { font-size: 13px; font-weight: 600; margin: 8px 0 4px; }
+        .bubbla p { margin: 0 0 6px; }
+        .bubbla p:last-child { margin-bottom: 0; }
+        .bubbla ul, .bubbla ol { padding-left: 16px; margin: 4px 0; }
+        .bubbla li { margin-bottom: 2px; }
+        .bubbla strong { font-weight: 600; }
+        .bubbla em { font-style: italic; }
+        .bubbla a { color: #f0c040; }
+        .bubbla code { font-family: 'DM Mono', monospace; font-size: 11px; background: rgba(0,0,0,0.2); padding: 1px 4px; border-radius: 3px; }
+        .bubbla pre { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 6px 0; }
+        .bubbla pre code { background: none; padding: 0; }
+        .bubbla hr { border: none; border-top: 1px solid rgba(255,255,255,0.15); margin: 8px 0; }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <span id="header-text">AIuda Mentor</span>
+        <div id="header-knappar">
+            <button id="tema-knapp" title="Toggle theme">☀</button>
+            <button id="spara-session" title="Spara session till logg">💾</button>
+            <button id="visa-logg" title="Visa minnesanteckningar">📋</button>
+            <button id="nytt-projekt-header" title="Nytt projekt">＋</button>
+        </div>
+    </div>
+
+    <div id="projekt-indikator">
+        <div class="projekt-namn" id="projekt-namn-text"></div>
+        <div class="projekt-fraga" id="projekt-fraga-text"></div>
+    </div>
+
+    <div id="välkommen">
+        <div class="rubrik">AIuda Mentor</div>
+        <div class="beskrivning">Din AI-handledare för research.<br>Skapa ett projekt för att börja.</div>
+        <button id="nytt-projekt-knapp">＋ Nytt projekt</button>
+    </div>
+
+    <div id="ny-fraga-panel">
+        <div class="rubrik">Nytt projekt</div>
+        <input id="projekt-namn-input" type="text" placeholder="Projektnamn (t.ex. AI och invasivitet)">
+        <textarea id="fraga-input" placeholder="Din frågeställning..."></textarea>
+        <button id="starta-knapp">Starta →</button>
+    </div>
+
+    <div id="meddelanden" style="display:none;"></div>
+    <div id="logg-vy"></div>
+
+    <div id="input-area" style="display:none;">
+        <textarea id="input" placeholder="Ställ en fråga..."></textarea>
+        <button id="sok-knapp" title="Sök med din webbläsare">🔍</button>
+        <button id="skicka">→</button>
+    </div>
+
+    <script src="marked.min.js"></script>
+    <script src="locales.js"></script>
+    <script src="sidepanel.js"></script>
+</body>
+</html>
