@@ -6,10 +6,15 @@ let aktivtProjekt = null; // { id, namn, fraga }
 let t = AR_LOCALES.en;
 
 // --- Init ---
-chrome.storage.local.get(["lang", "tema", "fontSize", "researchSessionId", "researchFraga", "researchProjektNamn"], (result) => {
+chrome.storage.local.get(["lang", "tema", "fontSize", "researchSessionId", "researchFraga", "researchProjektNamn", "arToken"], (result) => {
     t = AR_LOCALES[result.lang] || AR_LOCALES.en;
     tillampaTemat(result.tema || "mörkt");
     tillampaFontSize(result.fontSize || 13);
+
+    if (!result.arToken) {
+        visaLoginVy();
+        return;
+    }
 
     if (result.researchSessionId && result.researchFraga) {
         aktivtProjekt = {
@@ -18,6 +23,26 @@ chrome.storage.local.get(["lang", "tema", "fontSize", "researchSessionId", "rese
             fraga: result.researchFraga
         };
         öppnaProjekt(aktivtProjekt);
+    }
+});
+
+function visaLoginVy() {
+    document.getElementById("login-vy").style.display = "flex";
+    document.getElementById("login-vy").style.flexDirection = "column";
+    document.getElementById("välkommen").style.display = "none";
+}
+
+document.getElementById("login-knapp").addEventListener("click", () => {
+    const extId = chrome.runtime.id;
+    chrome.tabs.create({ url: `https://annotated-reader-backend.vercel.app/auth.html?ext_id=${extId}` });
+});
+
+// Lyssna på login-bekräftelse och visa välkomstskärmen
+chrome.storage.onChanged.addListener((changes) => {
+    if (changes.arToken?.newValue) {
+        document.getElementById("login-vy").style.display = "none";
+        document.getElementById("välkommen").style.display = "flex";
+        document.getElementById("välkommen").style.flexDirection = "column";
     }
 });
 

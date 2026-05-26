@@ -19,7 +19,8 @@
     "permissions": [
         "storage",
         "sidePanel",
-        "search"
+        "search",
+        "tabs"
     ],
     "host_permissions": [
         "https://annotated-reader-backend.vercel.app/*"
