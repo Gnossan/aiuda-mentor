@@ -369,36 +369,65 @@ function formateraLoggDatum(isoString) {
         + ", " + d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 }
 
+function stängLogg() {
+    const loggVy = document.getElementById("logg-vy");
+    const meddelandenEl = document.getElementById("meddelanden");
+    const inputArea = document.getElementById("input-area");
+    loggVy.style.display = "none";
+    loggVy.innerHTML = "";
+    meddelandenEl.style.display = "flex";
+    inputArea.style.display = "flex";
+    document.getElementById("visa-logg").classList.remove("aktiv");
+}
+
 async function visaLogg() {
     const loggVy = document.getElementById("logg-vy");
     const meddelandenEl = document.getElementById("meddelanden");
+    const inputArea = document.getElementById("input-area");
     const loggKnapp = document.getElementById("visa-logg");
 
-    const visarLogg = loggVy.style.display === "flex";
-    if (visarLogg) {
-        loggVy.style.display = "none";
-        meddelandenEl.style.display = "flex";
-        loggKnapp.classList.remove("aktiv");
+    // Redan öppen — stäng
+    if (loggVy.style.display === "flex") {
+        stängLogg();
         return;
     }
 
+    // Dölj chatt och input
+    meddelandenEl.style.display = "none";
+    inputArea.style.display = "none";
+    loggKnapp.classList.add("aktiv");
+
+    // Visa logg med tillbaka-knapp
     loggVy.style.display = "flex";
     loggVy.style.flexDirection = "column";
-    meddelandenEl.style.display = "none";
-    loggKnapp.classList.add("aktiv");
-    loggVy.innerHTML = "<div style='opacity:0.4;font-size:11px;padding:8px 0;'>Hämtar minnesanteckningar…</div>";
+    loggVy.innerHTML = `
+        <div style="padding:10px 0 14px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;display:flex;align-items:center;gap:10px;">
+            <button id="logg-tillbaka" style="background:none;border:none;color:#f0c040;cursor:pointer;font-size:13px;padding:0;opacity:0.8;">← Tillbaka</button>
+            <span style="font-size:10px;opacity:0.4;text-transform:uppercase;letter-spacing:0.08em;">Minnesanteckningar</span>
+        </div>
+        <div id="logg-innehall" style="flex:1;overflow-y:auto;">
+            <div style="opacity:0.4;font-size:11px;padding:8px 0;">Hämtar…</div>
+        </div>`;
 
-    const svar = await chrome.runtime.sendMessage({ type: "GET_MENTOR_LOG" });
+    document.getElementById("logg-tillbaka").addEventListener("click", stängLogg);
+
+    // Hämta bara poster för detta projekt
+    const svar = await chrome.runtime.sendMessage({
+        type: "GET_MENTOR_LOG",
+        sessionId: aktivtProjekt?.id
+    });
+
+    const innehall = document.getElementById("logg-innehall");
+    if (!innehall) return;
 
     if (!svar?.entries?.length) {
-        loggVy.innerHTML = "<div style='opacity:0.4;font-size:11px;padding:8px 0;'>Inga sparade sessioner ännu.</div>";
+        innehall.innerHTML = "<div style='opacity:0.4;font-size:11px;padding:8px 0;'>Inga sparade sessioner för detta projekt ännu.</div>";
         return;
     }
 
-    loggVy.innerHTML = svar.entries.map(e => `
+    innehall.innerHTML = svar.entries.map(e => `
         <div class="logg-entry">
             <div class="logg-tidsstampel">${formateraLoggDatum(e.timestamp)}</div>
-            <div class="logg-fraga">🔍 ${e.namn || e.fraga || ""}</div>
             <div class="logg-sammanfattning">${e.sammanfattning || ""}</div>
             ${e.insikter?.length ? `<ul class="logg-insikter">${e.insikter.map(i => `<li>${i}</li>`).join("")}</ul>` : ""}
             ${e.nyckelord?.length ? `<div class="logg-nyckelord">${e.nyckelord.map(k => `<span>${k}</span>`).join("")}</div>` : ""}

@@ -166,7 +166,10 @@ if (message.type === "TOOLBAR_SEARCH") {
     if (message.type === "GET_MENTOR_LOG") {
         hämtaToken().then(token => {
             if (!token) { sendResponse({ error: "Ej inloggad" }); return; }
-            fetchMedToken(`${BACKEND}/api/mentor-log`, { method: "GET" }, token)
+            const url = message.sessionId
+                ? `${BACKEND}/api/mentor-log?sessionId=${encodeURIComponent(message.sessionId)}`
+                : `${BACKEND}/api/mentor-log`;
+            fetchMedToken(url, { method: "GET" }, token)
                 .then(async r => {
                     const data = await r.json();
                     sendResponse(data);
