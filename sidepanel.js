@@ -1,8 +1,9 @@
 // AIuda Mentor — sidopanel
 let historik = [];
 let systemprompt = "";
-let sessionId = null;
-let aktivtProjekt = null; // { id, namn, fraga }
+let sessionId = null;      // Stabilt projekt-ID (historik-nyckel)
+let aktivtProjekt = null;  // { id (=sessionId), projektId, namn, fraga }
+let nuvarandeSessionId = "session_" + Date.now(); // Nytt per fönsteröppning
 let t = AR_LOCALES.en;
 
 // --- Init ---
@@ -82,12 +83,13 @@ function starta() {
     const namn = document.getElementById("projekt-namn-input").value.trim() || fraga.slice(0, 40);
     if (!fraga) return;
 
-    const nyId = "ar_research_" + Date.now();
-    aktivtProjekt = { id: nyId, namn, fraga };
+    const projektId = "projekt_" + Date.now();
+    aktivtProjekt = { id: projektId, projektId, namn, fraga };
 
     chrome.storage.local.set({
         researchFraga: fraga,
-        researchSessionId: nyId,
+        researchSessionId: projektId,
+        researchProjektId: projektId,
         researchProjektNamn: namn,
         researchAktiv: true
     });
@@ -335,7 +337,8 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
         insikter: parsed.insikter || [],
         kallor: parsed.kallor || [],
         nyckelord: parsed.nyckelord || [],
-        sessionId: aktivtProjekt.id,
+        projektId: aktivtProjekt.projektId || aktivtProjekt.id,
+        sessionId: nuvarandeSessionId,
         lang: t === AR_LOCALES.sv ? "sv" : "en"
     };
 
@@ -414,7 +417,7 @@ async function visaLogg() {
     // Hämta bara poster för detta projekt
     const svar = await chrome.runtime.sendMessage({
         type: "GET_MENTOR_LOG",
-        sessionId: aktivtProjekt?.id
+        projektId: aktivtProjekt?.projektId || aktivtProjekt?.id
     });
 
     const innehall = document.getElementById("logg-innehall");
