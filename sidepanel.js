@@ -283,6 +283,15 @@ function laggTillBubbla(roll, text, skrolla = true) {
     }
 }
 
+// --- Öppna länkar i webbläsaren (sidopanel öppnar inte flikar automatiskt) ---
+document.getElementById("meddelanden").addEventListener("click", (e) => {
+    const länk = e.target.closest("a");
+    if (länk?.href) {
+        e.preventDefault();
+        chrome.tabs.create({ url: länk.href });
+    }
+});
+
 function visaTänker() {
     const div = document.createElement("div");
     div.className = "ar-tänker";
