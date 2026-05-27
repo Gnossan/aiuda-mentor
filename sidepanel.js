@@ -4,7 +4,6 @@ let systemprompt = "";
 let sessionId = null;
 let aktivtProjekt = null; // { id, namn, fraga }
 let t = AR_LOCALES.en;
-let bifogadPDF = null; // { file_id, namn }
 
 // --- Init ---
 chrome.storage.local.get(["lang", "tema", "fontSize", "researchSessionId", "researchFraga", "researchProjektNamn", "arToken"], (result) => {
@@ -239,29 +238,10 @@ document.getElementById("input").addEventListener("keydown", (e) => {
 async function skicka() {
     const input = document.getElementById("input");
     const text = input.value.trim();
-    if ((!text && !bifogadPDF) || !aktivtProjekt) return;
+    if (!text || !aktivtProjekt) return;
 
-    const visadText = bifogadPDF
-        ? `📄 ${bifogadPDF.namn}${text ? "\n" + text : ""}`
-        : text;
-    laggTillBubbla("user", visadText);
-
-    // Bygg meddelandeinnehåll — dokument + text om PDF är bifogad
-    let content;
-    if (bifogadPDF) {
-        content = [
-            {
-                type: "document",
-                source: { type: "file", file_id: bifogadPDF.file_id }
-            },
-            { type: "text", text: text || "Analysera detta dokument i relation till min frågeställning." }
-        ];
-        doldPDFIndikator();
-    } else {
-        content = text;
-    }
-
-    historik.push({ role: "user", content });
+    laggTillBubbla("user", text);
+    historik.push({ role: "user", content: text });
     input.value = "";
     await sparaHistorik();
 
@@ -273,66 +253,6 @@ async function skicka() {
     await sparaHistorik();
 }
 
-// --- PDF-bifogning ---
-document.getElementById("bifoga-pdf").addEventListener("click", () => {
-    document.getElementById("pdf-input").click();
-});
-
-document.getElementById("pdf-input").addEventListener("change", async (e) => {
-    const fil = e.target.files[0];
-    if (!fil) return;
-
-    const bifogaKnapp = document.getElementById("bifoga-pdf");
-    bifogaKnapp.textContent = "⏳";
-    bifogaKnapp.disabled = true;
-
-    try {
-        const base64 = await läsFil(fil);
-        const svar = await chrome.runtime.sendMessage({
-            type: "UPLOAD_PDF",
-            pdf_base64: base64,
-            filename: fil.name
-        });
-
-        if (svar?.file_id) {
-            bifogadPDF = { file_id: svar.file_id, namn: fil.name };
-            visaPDFIndikator(fil.name);
-        } else {
-            laggTillBubbla("assistant", `_Kunde inte ladda upp PDF: ${svar?.error || "okänt fel"}_`);
-        }
-    } catch (e) {
-        laggTillBubbla("assistant", `_Fel vid PDF-uppladdning: ${e.message}_`);
-    } finally {
-        bifogaKnapp.textContent = "📎";
-        bifogaKnapp.disabled = false;
-        e.target.value = "";
-    }
-});
-
-function läsFil(fil) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            const base64 = reader.result.split(",")[1];
-            resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(fil);
-    });
-}
-
-function visaPDFIndikator(namn) {
-    const ind = document.getElementById("pdf-indikator");
-    document.getElementById("pdf-namn").textContent = namn;
-    ind.style.display = "flex";
-}
-
-function doldPDFIndikator() {
-    document.getElementById("pdf-indikator").style.display = "none";
-    bifogadPDF = null;
-}
-
-document.getElementById("pdf-ta-bort").addEventListener("click", doldPDFIndikator);
 
 // --- Sökning med webbläsarens sökmotor ---
 document.getElementById("sok-knapp").addEventListener("click", () => {
