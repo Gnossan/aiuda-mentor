@@ -277,6 +277,8 @@ function tillampaFontSize(size) {
     document.documentElement.style.setProperty("--ar-font-size", size + "px");
 }
 
+document.getElementById("kryptering-knapp").addEventListener("click", () => visaLösenordsDialog());
+
 document.getElementById("tema-knapp").addEventListener("click", () => {
     const ljust = document.body.classList.toggle("ljust");
     document.getElementById("tema-knapp").textContent = ljust ? "🌙" : "☀";
