@@ -4,6 +4,7 @@ let systemprompt = "";
 let sessionId = null;      // Stabilt projekt-ID (historik-nyckel)
 let aktivtProjekt = null;  // { id (=sessionId), projektId, namn, fraga }
 let nuvarandeSessionId = "session_" + Date.now(); // Nytt per fönsteröppning
+let sessionStartIndex = 0; // Var i historiken den aktuella sessionen börjar
 let t = AR_LOCALES.en;
 
 // --- Init ---
@@ -126,6 +127,8 @@ async function öppnaProjekt(projekt) {
 
     if (sparadData?.historik?.length > 0) {
         historik = sparadData.historik;
+        // Markera var den nuvarande sessionen börjar
+        sessionStartIndex = historik.length;
         historik.forEach(msg => {
             if (msg.silent) return;
             const text = typeof msg.content === "string" ? msg.content : msg.content[0]?.text || "";
@@ -134,6 +137,7 @@ async function öppnaProjekt(projekt) {
         document.getElementById("meddelanden").scrollTop = document.getElementById("meddelanden").scrollHeight;
     } else {
         historik = [];
+        sessionStartIndex = 0;
         await startaKonversation();
     }
 }
@@ -323,8 +327,10 @@ async function sparaMentorSession() {
 
 Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 3-8 nyckelord.`;
 
+    // Summera bara den aktuella sessionens meddelanden, inte hela projekthistoriken
+    const sessionHistorik = historik.slice(sessionStartIndex).filter(m => !m.silent);
     const summaryHistorik = [
-        ...historik.filter(m => !m.silent),
+        ...sessionHistorik,
         { role: "user", content: summaryPrompt }
     ];
 
