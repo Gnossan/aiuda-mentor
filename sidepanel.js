@@ -316,20 +316,32 @@ async function sparaMentorSession() {
     sparaKnapp.textContent = "⏳";
     sparaKnapp.disabled = true;
 
-    const summaryPrompt = `Summarize this research session as a JSON object. Return ONLY valid JSON, no other text.
+    const summaryPrompt = `Summarize THIS SPECIFIC SESSION as a JSON object. Focus on what is NEW — what was explored, decided or discovered in THIS session that wasn't already established. Return ONLY valid JSON, no other text.
 
 {
-  "sammanfattning": "2-3 sentences summarizing what was discussed, learned and decided",
-  "insikter": ["key insight or decision 1", "key insight 2"],
+  "sammanfattning": "2-3 sentences about what was NEW in this session — new arguments, new distinctions, new directions taken",
+  "insikter": ["new insight specific to this session", "new decision or turn taken"],
   "kallor": [{"title": "source title", "url": "https://..."}],
   "nyckelord": ["keyword1", "keyword2"]
 }
 
 Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 3-8 nyckelord.`;
 
-    // Summera bara den aktuella sessionens meddelanden, inte hela projekthistoriken
+    // Bygg summary-historik: tidigare sessioner som kontext + markering + ny session
+    const tidigareHistorik = historik.slice(0, sessionStartIndex).filter(m => !m.silent);
     const sessionHistorik = historik.slice(sessionStartIndex).filter(m => !m.silent);
+
+    if (sessionHistorik.length < 1) {
+        sparaKnapp.textContent = "–";
+        setTimeout(() => { sparaKnapp.textContent = "💾"; sparaKnapp.disabled = false; }, 1500);
+        return;
+    }
+
+    // Ge Claude kontexten: vad som var känt sedan tidigare + vad som är nytt nu
     const summaryHistorik = [
+        ...tidigareHistorik,
+        { role: "user", content: "[SESSION BOUNDARY — the following messages are from the current session only. Summarize only what is new below this line.]" },
+        { role: "assistant", content: "Understood. I will summarize only the new session below." },
         ...sessionHistorik,
         { role: "user", content: summaryPrompt }
     ];
