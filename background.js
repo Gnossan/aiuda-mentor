@@ -1,7 +1,7 @@
 importScripts('locales.js');
 console.log("AIuda Mentor background.js laddad");
 
-const BACKEND = "https://aiuda-mentor.vercel.app";
+const BACKEND = "https://aiuda-mentor-backend.vercel.app";
 const FIREBASE_API_KEY = "AIzaSyCmClubetYGavOEVHBUHKQ-_sZZdt-LIWc";
 
 // --- Auth ---
