@@ -332,7 +332,15 @@
     <div id="meddelanden" style="display:none;"></div>
     <div id="logg-vy"></div>
 
+    <div id="pdf-indikator" style="display:none;padding:6px 16px;background:#1e1a0e;border-top:1px solid #333;font-size:11px;color:#f0c040;display:none;align-items:center;gap:8px;">
+        <span>📄</span>
+        <span id="pdf-namn" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <button id="pdf-ta-bort" style="background:none;border:none;color:#f0c040;cursor:pointer;font-size:14px;opacity:0.7;padding:0;">✕</button>
+    </div>
+
     <div id="input-area" style="display:none;">
+        <input type="file" id="pdf-input" accept=".pdf" style="display:none;">
+        <button id="bifoga-pdf" title="Bifoga PDF" style="padding:8px 10px;background:#2a2218;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-size:13px;align-self:flex-end;">📎</button>
         <textarea id="input" placeholder="Ställ en fråga..."></textarea>
         <button id="sok-knapp" title="Sök med din webbläsare">🔍</button>
         <button id="skicka">→</button>
