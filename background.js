@@ -142,7 +142,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-if (message.type === "TOOLBAR_SEARCH") {
+    if (message.type === "SAVE_ENCRYPTION_KEY") {
+        hämtaToken().then(token => {
+            if (!token) { sendResponse({ error: "Ej inloggad" }); return; }
+            fetchMedToken(`${BACKEND}/api/encryption-key`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(message.nyckelData)
+            }, token).then(async r => { const data = await r.json(); sendResponse(data); })
+            .catch(e => sendResponse({ error: e.message }));
+        });
+        return true;
+    }
+
+    if (message.type === "GET_ENCRYPTION_KEY") {
+        hämtaToken().then(token => {
+            if (!token) { sendResponse({ error: "Ej inloggad" }); return; }
+            fetchMedToken(`${BACKEND}/api/encryption-key`, { method: "GET" }, token)
+                .then(async r => {
+                    if (r.status === 404) { sendResponse({ ej_hittad: true }); return; }
+                    const data = await r.json();
+                    sendResponse(data);
+                }).catch(e => sendResponse({ error: e.message }));
+        });
+        return true;
+    }
+
+    if (message.type === "TOOLBAR_SEARCH") {
         chrome.search.query({ text: message.query, disposition: "NEW_TAB" });
         sendResponse({});
         return true;

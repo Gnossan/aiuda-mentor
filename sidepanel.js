@@ -14,21 +14,167 @@ let krypteringsNyckel = null; // CryptoKey — lever bara i minnet
 
 async function laddaEllerSkapaNyckel() {
     const sparad = await chrome.storage.local.get("aiudaEncryptedKey");
+
     if (sparad.aiudaEncryptedKey) {
-        // Importera sparad nyckel
+        // Lokal nyckel finns — ladda den
         const raw = base64TillBuffer(sparad.aiudaEncryptedKey);
         krypteringsNyckel = await crypto.subtle.importKey(
             "raw", raw, { name: "AES-GCM" }, true, ["encrypt", "decrypt"]
         );
-    } else {
-        // Generera ny nyckel och spara
-        krypteringsNyckel = await crypto.subtle.generateKey(
-            { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
-        );
-        const exporterad = await crypto.subtle.exportKey("raw", krypteringsNyckel);
-        await chrome.storage.local.set({ aiudaEncryptedKey: bufferTillBase64(exporterad) });
-        visaKrypteringsOnboarding();
+        return;
     }
+
+    // Ingen lokal nyckel — kolla om det finns en i Firebase (annan enhet)
+    const fjärrNyckel = await chrome.runtime.sendMessage({ type: "GET_ENCRYPTION_KEY" });
+    if (fjärrNyckel?.wrappedKey) {
+        // Nyckel finns i Firebase — be om lösenord för att låsa upp
+        await visaLösenordsImportDialog(fjärrNyckel);
+        return;
+    }
+
+    // Ingen nyckel alls — generera ny och visa onboarding
+    krypteringsNyckel = await crypto.subtle.generateKey(
+        { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+    );
+    const exporterad = await crypto.subtle.exportKey("raw", krypteringsNyckel);
+    await chrome.storage.local.set({ aiudaEncryptedKey: bufferTillBase64(exporterad) });
+    visaKrypteringsOnboarding();
+}
+
+// --- Exportera nyckel skyddad med lösenord (PBKDF2 + AES-GCM wrap) ---
+async function exporteraNyckelMedLösenord(lösenord) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw", new TextEncoder().encode(lösenord), "PBKDF2", false, ["deriveKey"]
+    );
+    const wrappingKey = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 310000, hash: "SHA-256" },
+        keyMaterial, { name: "AES-GCM", length: 256 }, false, ["wrapKey"]
+    );
+    const wrappedKey = await crypto.subtle.wrapKey("raw", krypteringsNyckel, wrappingKey, { name: "AES-GCM", iv });
+
+    return {
+        wrappedKey: bufferTillBase64(wrappedKey),
+        salt: bufferTillBase64(salt),
+        iv: bufferTillBase64(iv)
+    };
+}
+
+// --- Importera nyckel med lösenord på ny enhet ---
+async function importeraNyckelMedLösenord(lösenord, nyckelData) {
+    const salt = base64TillBuffer(nyckelData.salt);
+    const iv = base64TillBuffer(nyckelData.iv);
+    const wrappedKey = base64TillBuffer(nyckelData.wrappedKey);
+
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw", new TextEncoder().encode(lösenord), "PBKDF2", false, ["deriveKey"]
+    );
+    const wrappingKey = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 310000, hash: "SHA-256" },
+        keyMaterial, { name: "AES-GCM", length: 256 }, false, ["unwrapKey"]
+    );
+
+    return await crypto.subtle.unwrapKey(
+        "raw", wrappedKey, wrappingKey,
+        { name: "AES-GCM", iv },
+        { name: "AES-GCM", length: 256 },
+        true, ["encrypt", "decrypt"]
+    );
+}
+
+// --- Dialog: ange lösenord för att importera nyckel från ny enhet ---
+async function visaLösenordsImportDialog(nyckelData) {
+    return new Promise(resolve => {
+        const dialog = document.createElement("div");
+        dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;`;
+        dialog.innerHTML = `
+            <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:24px;max-width:300px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">
+                <div style="color:#f0c040;font-weight:600;margin-bottom:12px;">🔐 Hämta dina anteckningar</div>
+                <p style="opacity:0.8;margin-bottom:16px;">Du har anteckningar på en annan enhet. Ange ditt återställningslösenord för att komma åt dem.</p>
+                <input id="import-lösenord" type="password" placeholder="Återställningslösenord" style="width:100%;padding:8px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
+                <div id="import-fel" style="color:#ff6b6b;font-size:11px;margin-bottom:8px;display:none;"></div>
+                <button id="import-ok" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Lås upp →</button>
+                <button id="import-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.6;font-size:11px;">Börja med ny nyckel istället</button>
+            </div>`;
+        document.body.appendChild(dialog);
+
+        document.getElementById("import-ok").addEventListener("click", async () => {
+            const lösenord = document.getElementById("import-lösenord").value;
+            if (!lösenord) return;
+            try {
+                krypteringsNyckel = await importeraNyckelMedLösenord(lösenord, nyckelData);
+                const raw = await crypto.subtle.exportKey("raw", krypteringsNyckel);
+                await chrome.storage.local.set({ aiudaEncryptedKey: bufferTillBase64(raw) });
+                dialog.remove();
+                resolve();
+            } catch {
+                const felEl = document.getElementById("import-fel");
+                felEl.textContent = "Fel lösenord — försök igen";
+                felEl.style.display = "block";
+            }
+        });
+
+        document.getElementById("import-lösenord").addEventListener("keydown", e => {
+            if (e.key === "Enter") document.getElementById("import-ok").click();
+        });
+
+        document.getElementById("import-skip").addEventListener("click", async () => {
+            // Generera ny nyckel och börja om
+            krypteringsNyckel = await crypto.subtle.generateKey(
+                { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+            );
+            const raw = await crypto.subtle.exportKey("raw", krypteringsNyckel);
+            await chrome.storage.local.set({ aiudaEncryptedKey: bufferTillBase64(raw) });
+            dialog.remove();
+            resolve();
+        });
+    });
+}
+
+// --- Dialog: sätt återställningslösenord ---
+async function visaLösenordsDialog() {
+    return new Promise(resolve => {
+        const dialog = document.createElement("div");
+        dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;`;
+        dialog.innerHTML = `
+            <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:24px;max-width:300px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">
+                <div style="color:#f0c040;font-weight:600;margin-bottom:12px;">🔑 Återställningslösenord</div>
+                <p style="opacity:0.8;margin-bottom:16px;">Ange ett lösenord för att kunna komma åt dina anteckningar från andra enheter.</p>
+                <input id="ny-lösenord" type="password" placeholder="Välj ett lösenord" style="width:100%;padding:8px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
+                <input id="ny-lösenord-2" type="password" placeholder="Bekräfta lösenordet" style="width:100%;padding:8px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
+                <div id="lösenord-fel" style="color:#ff6b6b;font-size:11px;margin-bottom:8px;display:none;"></div>
+                <button id="lösenord-spara" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Spara lösenord →</button>
+                <button id="lösenord-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.6;font-size:11px;">Hoppa över (bara den här enheten)</button>
+            </div>`;
+        document.body.appendChild(dialog);
+
+        document.getElementById("lösenord-spara").addEventListener("click", async () => {
+            const lösenord = document.getElementById("ny-lösenord").value;
+            const lösenord2 = document.getElementById("ny-lösenord-2").value;
+            const felEl = document.getElementById("lösenord-fel");
+
+            if (!lösenord) { felEl.textContent = "Ange ett lösenord"; felEl.style.display = "block"; return; }
+            if (lösenord !== lösenord2) { felEl.textContent = "Lösenorden matchar inte"; felEl.style.display = "block"; return; }
+            if (lösenord.length < 8) { felEl.textContent = "Lösenordet måste vara minst 8 tecken"; felEl.style.display = "block"; return; }
+
+            const nyckelData = await exporteraNyckelMedLösenord(lösenord);
+            const resultat = await chrome.runtime.sendMessage({ type: "SAVE_ENCRYPTION_KEY", nyckelData });
+            if (resultat?.ok) {
+                dialog.remove();
+                resolve(true);
+            } else {
+                felEl.textContent = "Kunde inte spara — försök igen";
+                felEl.style.display = "block";
+            }
+        });
+
+        document.getElementById("lösenord-skip").addEventListener("click", () => {
+            dialog.remove();
+            resolve(false);
+        });
+    });
 }
 
 async function kryptera(obj) {
@@ -60,19 +206,22 @@ function base64TillBuffer(base64) {
 
 function visaKrypteringsOnboarding() {
     const dialog = document.createElement("div");
-    dialog.style.cssText = `
-        position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;
-        display:flex;align-items:center;justify-content:center;padding:20px;`;
+    dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;`;
     dialog.innerHTML = `
         <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:24px;max-width:300px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">
             <div style="color:#f0c040;font-weight:600;margin-bottom:12px;">🔐 Dina anteckningar krypteras</div>
-            <p style="opacity:0.8;margin-bottom:12px;">AIuda krypterar dina research-anteckningar lokalt på den här enheten. Vi kan inte läsa dem.</p>
-            <p style="opacity:0.6;font-size:11px;margin-bottom:20px;">⚠ Utan återställningslösenord är anteckningarna låsta till den här enheten. Rensar du webbläsardata är de borta.</p>
-            <p style="opacity:0.6;font-size:11px;margin-bottom:20px;">Stöd för återställningslösenord och flerenhetssynk kommer i nästa version.</p>
-            <button id="onboarding-ok" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;">Jag förstår →</button>
+            <p style="opacity:0.8;margin-bottom:12px;">AIuda krypterar dina research-anteckningar lokalt. Vi kan inte läsa dem.</p>
+            <p style="opacity:0.6;font-size:11px;margin-bottom:16px;">⚠ Utan återställningslösenord är anteckningarna låsta till den här enheten.</p>
+            <button id="onboarding-lösenord" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Sätt återställningslösenord →</button>
+            <button id="onboarding-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.6;font-size:11px;">Hoppa över (bara den här enheten)</button>
         </div>`;
     document.body.appendChild(dialog);
-    document.getElementById("onboarding-ok").addEventListener("click", () => dialog.remove());
+
+    document.getElementById("onboarding-lösenord").addEventListener("click", async () => {
+        dialog.remove();
+        await visaLösenordsDialog();
+    });
+    document.getElementById("onboarding-skip").addEventListener("click", () => dialog.remove());
 }
 
 // --- Init ---
