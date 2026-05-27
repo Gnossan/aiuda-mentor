@@ -341,15 +341,29 @@ async function öppnaProjekt(projekt) {
 
     byggSystemprompt();
 
-    // Ladda historik
+    // Ladda historik — försök Firebase först, fall tillbaka på lokal cache
     document.getElementById("meddelanden").innerHTML = "";
-    const sparad = await chrome.storage.local.get(sessionId);
-    const sparadData = sparad[sessionId];
+    let laddadHistorik = null;
 
-    if (sparadData?.historik?.length > 0) {
-        historik = sparadData.historik;
-        // Markera var den nuvarande sessionen börjar
+    try {
+        const fjärr = await chrome.runtime.sendMessage({ type: "LOAD_HISTORIK", projektId: sessionId });
+        if (fjärr?.krypteradHistorik && krypteringsNyckel) {
+            const dekrypterad = await dekryptera(fjärr.krypteradHistorik);
+            if (dekrypterad) laddadHistorik = dekrypterad;
+        }
+    } catch {}
+
+    // Fall tillbaka på lokal cache om Firebase misslyckades
+    if (!laddadHistorik) {
+        const sparad = await chrome.storage.local.get(sessionId);
+        laddadHistorik = sparad[sessionId]?.historik || null;
+    }
+
+    if (laddadHistorik?.length > 0) {
+        historik = laddadHistorik;
         sessionStartIndex = historik.length;
+        // Uppdatera lokal cache med Firebase-data
+        await chrome.storage.local.set({ [sessionId]: { namn: projekt.namn, fraga: projekt.fraga, historik } });
         historik.forEach(msg => {
             if (msg.silent) return;
             const text = typeof msg.content === "string" ? msg.content : msg.content[0]?.text || "";
@@ -415,11 +429,31 @@ async function startaKonversation() {
 }
 
 // --- Historik ---
-async function sparaHistorik() {
+async function sparaHistorik(synkaFirebase = false) {
     if (!sessionId) return;
+
+    // Spara lokalt omedelbart (snabbt, alltid)
     await chrome.storage.local.set({
         [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik }
     });
+
+    // Synka till Firebase asynkront (krypterat) — bara när flagga är satt
+    if (synkaFirebase && krypteringsNyckel) {
+        try {
+            const krypteradHistorik = await kryptera(historik);
+            chrome.runtime.sendMessage({
+                type: "SAVE_HISTORIK",
+                data: {
+                    projektId: sessionId,
+                    namn: aktivtProjekt?.namn,
+                    fraga: aktivtProjekt?.fraga,
+                    krypteradHistorik
+                }
+            });
+        } catch (e) {
+            console.warn("Firebase-sync misslyckades:", e.message);
+        }
+    }
 }
 
 // --- AI-svar med [SEARCH: ...]-hantering ---
@@ -470,14 +504,14 @@ async function skicka() {
     laggTillBubbla("user", text);
     historik.push({ role: "user", content: text });
     input.value = "";
-    await sparaHistorik();
+    await sparaHistorik(); // Lokalt direkt
 
     const tänker = visaTänker();
     const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik });
     const assistantText = await hanteraAISvar(svar, tänker);
     laggTillBubbla("assistant", assistantText);
     historik.push({ role: "assistant", content: assistantText });
-    await sparaHistorik();
+    await sparaHistorik(true); // Lokalt + Firebase-sync efter AI-svar
 }
 
 
