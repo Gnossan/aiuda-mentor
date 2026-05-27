@@ -1,14 +1,82 @@
 // AIuda Mentor — sidopanel
 let historik = [];
 let systemprompt = "";
-let sessionId = null;      // Stabilt projekt-ID (historik-nyckel)
-let aktivtProjekt = null;  // { id (=sessionId), projektId, namn, fraga }
-let nuvarandeSessionId = "session_" + Date.now(); // Nytt per fönsteröppning
-let sessionStartIndex = 0; // Var i historiken den aktuella sessionen börjar
+let sessionId = null;
+let aktivtProjekt = null;
+let nuvarandeSessionId = "session_" + Date.now();
+let sessionStartIndex = 0;
 let t = AR_LOCALES.en;
+let krypteringsNyckel = null; // CryptoKey — lever bara i minnet
+
+// ============================================================
+// KRYPTERING (Web Crypto API — allt sker lokalt på enheten)
+// ============================================================
+
+async function laddaEllerSkapaNyckel() {
+    const sparad = await chrome.storage.local.get("aiudaEncryptedKey");
+    if (sparad.aiudaEncryptedKey) {
+        // Importera sparad nyckel
+        const raw = base64TillBuffer(sparad.aiudaEncryptedKey);
+        krypteringsNyckel = await crypto.subtle.importKey(
+            "raw", raw, { name: "AES-GCM" }, true, ["encrypt", "decrypt"]
+        );
+    } else {
+        // Generera ny nyckel och spara
+        krypteringsNyckel = await crypto.subtle.generateKey(
+            { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+        );
+        const exporterad = await crypto.subtle.exportKey("raw", krypteringsNyckel);
+        await chrome.storage.local.set({ aiudaEncryptedKey: bufferTillBase64(exporterad) });
+        visaKrypteringsOnboarding();
+    }
+}
+
+async function kryptera(obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const data = new TextEncoder().encode(JSON.stringify(obj));
+    const krypterad = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, krypteringsNyckel, data);
+    return { data: bufferTillBase64(krypterad), iv: bufferTillBase64(iv) };
+}
+
+async function dekryptera(payload) {
+    try {
+        const iv = base64TillBuffer(payload.iv);
+        const data = base64TillBuffer(payload.data);
+        const dekrypterad = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, krypteringsNyckel, data);
+        return JSON.parse(new TextDecoder().decode(dekrypterad));
+    } catch {
+        return null; // Fel nyckel eller korrupt data
+    }
+}
+
+function bufferTillBase64(buffer) {
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+}
+
+function base64TillBuffer(base64) {
+    const bin = atob(base64);
+    return Uint8Array.from(bin, c => c.charCodeAt(0));
+}
+
+function visaKrypteringsOnboarding() {
+    const dialog = document.createElement("div");
+    dialog.style.cssText = `
+        position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;
+        display:flex;align-items:center;justify-content:center;padding:20px;`;
+    dialog.innerHTML = `
+        <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:24px;max-width:300px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">
+            <div style="color:#f0c040;font-weight:600;margin-bottom:12px;">🔐 Dina anteckningar krypteras</div>
+            <p style="opacity:0.8;margin-bottom:12px;">AIuda krypterar dina research-anteckningar lokalt på den här enheten. Vi kan inte läsa dem.</p>
+            <p style="opacity:0.6;font-size:11px;margin-bottom:20px;">⚠ Utan återställningslösenord är anteckningarna låsta till den här enheten. Rensar du webbläsardata är de borta.</p>
+            <p style="opacity:0.6;font-size:11px;margin-bottom:20px;">Stöd för återställningslösenord och flerenhetssynk kommer i nästa version.</p>
+            <button id="onboarding-ok" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;">Jag förstår →</button>
+        </div>`;
+    document.body.appendChild(dialog);
+    document.getElementById("onboarding-ok").addEventListener("click", () => dialog.remove());
+}
 
 // --- Init ---
-chrome.storage.local.get(["lang", "tema", "fontSize", "researchSessionId", "researchFraga", "researchProjektNamn", "arToken"], (result) => {
+chrome.storage.local.get(["lang", "tema", "fontSize", "researchSessionId", "researchFraga", "researchProjektNamn", "arToken"], async (result) => {
     t = AR_LOCALES[result.lang] || AR_LOCALES.en;
     tillampaTemat(result.tema || "mörkt");
     tillampaFontSize(result.fontSize || 13);
@@ -17,6 +85,8 @@ chrome.storage.local.get(["lang", "tema", "fontSize", "researchSessionId", "rese
         visaLoginVy();
         return;
     }
+
+    await laddaEllerSkapaNyckel();
 
     if (result.researchSessionId && result.researchFraga) {
         aktivtProjekt = {
@@ -357,16 +427,24 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
         parsed = { sammanfattning: rawText.slice(0, 300) };
     }
 
-    const entry = {
-        fraga: aktivtProjekt.fraga,
-        namn: aktivtProjekt.namn,
+    // Kryptera det känsliga innehållet innan det lämnar enheten
+    const känsligtInnehåll = {
         sammanfattning: parsed.sammanfattning || "",
         insikter: parsed.insikter || [],
         kallor: parsed.kallor || [],
-        nyckelord: parsed.nyckelord || [],
+        nyckelord: parsed.nyckelord || []
+    };
+    const krypteratInnehåll = await kryptera(känsligtInnehåll);
+
+    const entry = {
+        // Okrypterat — behövs för filtrering och sortering
+        fraga: aktivtProjekt.fraga,
+        namn: aktivtProjekt.namn,
         projektId: aktivtProjekt.projektId || aktivtProjekt.id,
         sessionId: nuvarandeSessionId,
-        lang: t === AR_LOCALES.sv ? "sv" : "en"
+        lang: t === AR_LOCALES.sv ? "sv" : "en",
+        // Krypterat innehåll
+        krypterat: krypteratInnehåll
     };
 
     const resultat = await chrome.runtime.sendMessage({ type: "SAVE_MENTOR_LOG", entry });
@@ -455,7 +533,21 @@ async function visaLogg() {
         return;
     }
 
-    innehall.innerHTML = svar.entries.map(e => `
+    // Dekryptera varje post
+    const poster = await Promise.all(svar.entries.map(async e => {
+        let innehåll = { sammanfattning: "", insikter: [], nyckelord: [] };
+        if (e.krypterat) {
+            const dekrypterat = await dekryptera(e.krypterat);
+            if (dekrypterat) innehåll = dekrypterat;
+            else innehåll.sammanfattning = "🔐 Kan inte dekryptera — fel enhet eller nyckel";
+        } else {
+            // Äldre okrypterade poster
+            innehåll = { sammanfattning: e.sammanfattning, insikter: e.insikter || [], nyckelord: e.nyckelord || [] };
+        }
+        return { ...e, ...innehåll };
+    }));
+
+    innehall.innerHTML = poster.map(e => `
         <div class="logg-entry">
             <div class="logg-tidsstampel">${formateraLoggDatum(e.timestamp)}</div>
             <div class="logg-sammanfattning">${e.sammanfattning || ""}</div>
