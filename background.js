@@ -142,6 +142,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === "LIST_PROJEKT") {
+        hämtaToken().then(token => {
+            if (!token) { sendResponse({ error: "Ej inloggad" }); return; }
+            fetchMedToken(`${BACKEND}/api/projekt-historik`, { method: "GET" }, token)
+                .then(async r => { const data = await r.json(); sendResponse(data); })
+                .catch(e => sendResponse({ error: e.message }));
+        });
+        return true;
+    }
+
     if (message.type === "SAVE_HISTORIK") {
         hämtaToken().then(token => {
             if (!token) { sendResponse({ error: "Ej inloggad" }); return; }

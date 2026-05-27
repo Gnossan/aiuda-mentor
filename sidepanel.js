@@ -741,3 +741,80 @@ async function visaLogg() {
         </div>
     `).join("");
 }
+
+// --- Projekt-vy ---
+document.getElementById("visa-projekt").addEventListener("click", visaProjektVy);
+
+async function visaProjektVy() {
+    const loggVy = document.getElementById("logg-vy");
+    const meddelandenEl = document.getElementById("meddelanden");
+    const inputArea = document.getElementById("input-area");
+
+    // Återanvänd logg-vyn som container
+    meddelandenEl.style.display = "none";
+    inputArea.style.display = "none";
+    loggVy.style.display = "flex";
+    loggVy.style.flexDirection = "column";
+    document.getElementById("visa-logg").classList.remove("aktiv");
+    document.getElementById("visa-projekt").classList.add("aktiv");
+
+    loggVy.innerHTML = `
+        <div style="padding:10px 0 14px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:4px;display:flex;align-items:center;gap:10px;">
+            <button id="projekt-tillbaka" style="background:none;border:none;color:#f0c040;cursor:pointer;font-size:13px;padding:0;opacity:0.8;">← Tillbaka</button>
+            <span style="font-size:10px;opacity:0.4;text-transform:uppercase;letter-spacing:0.08em;">Mina projekt</span>
+        </div>
+        <div id="projekt-lista" style="flex:1;overflow-y:auto;">
+            <div style="opacity:0.4;font-size:11px;padding:8px 0;">Hämtar projekt…</div>
+        </div>`;
+
+    document.getElementById("projekt-tillbaka").addEventListener("click", () => {
+        loggVy.style.display = "none";
+        loggVy.innerHTML = "";
+        meddelandenEl.style.display = "flex";
+        inputArea.style.display = aktivtProjekt ? "flex" : "none";
+        document.getElementById("visa-projekt").classList.remove("aktiv");
+    });
+
+    const svar = await chrome.runtime.sendMessage({ type: "LIST_PROJEKT" });
+    const lista = document.getElementById("projekt-lista");
+    if (!lista) return;
+
+    if (!svar?.projekt?.length) {
+        lista.innerHTML = "<div style='opacity:0.4;font-size:11px;padding:8px 0;'>Inga projekt hittade.</div>";
+        return;
+    }
+
+    lista.innerHTML = svar.projekt.map(p => `
+        <div class="logg-entry" style="cursor:pointer;" data-id="${p.id}" data-namn="${encodeURIComponent(p.namn)}" data-fraga="${encodeURIComponent(p.fraga)}">
+            <div class="logg-tidsstampel">${formateraLoggDatum(p.senastSparat)}</div>
+            <div class="logg-fraga" style="font-weight:600;margin-bottom:4px;">${p.namn || p.fraga.slice(0, 50)}</div>
+            <div style="font-size:11px;opacity:0.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.fraga}</div>
+        </div>
+    `).join("");
+
+    lista.querySelectorAll(".logg-entry").forEach(el => {
+        el.addEventListener("mouseenter", () => el.style.background = "rgba(255,255,255,0.04)");
+        el.addEventListener("mouseleave", () => el.style.background = "");
+        el.addEventListener("click", async () => {
+            const projekt = {
+                id: el.dataset.id,
+                projektId: el.dataset.id,
+                namn: decodeURIComponent(el.dataset.namn),
+                fraga: decodeURIComponent(el.dataset.fraga)
+            };
+            // Spara som aktivt projekt
+            await chrome.storage.local.set({
+                researchSessionId: projekt.id,
+                researchProjektId: projekt.id,
+                researchFraga: projekt.fraga,
+                researchProjektNamn: projekt.namn,
+                researchAktiv: true
+            });
+            nuvarandeSessionId = "session_" + Date.now();
+            loggVy.style.display = "none";
+            loggVy.innerHTML = "";
+            document.getElementById("visa-projekt").classList.remove("aktiv");
+            öppnaProjekt(projekt);
+        });
+    });
+}
