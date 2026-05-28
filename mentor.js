@@ -14,26 +14,42 @@ let anteckningarSparade = "";
 // KRYPTERING (samma som sidepanel.js)
 // ============================================================
 
-async function laddaEllerSkapaNyckel() {
-    const sparad = await chrome.storage.local.get("aiudaEncryptedKey");
-    if (sparad.aiudaEncryptedKey) {
-        const raw = base64TillBuffer(sparad.aiudaEncryptedKey);
-        krypteringsNyckel = await crypto.subtle.importKey(
-            "raw", raw, { name: "AES-GCM" }, true, ["encrypt", "decrypt"]
-        );
-        return;
-    }
+async function laddaEllerSkapaNyckel(email) {
+    // Ta bort eventuell gammal rånyckel från tidigare version (K-2)
+    await chrome.storage.local.remove("aiudaEncryptedKey");
+
     const fjärrNyckel = await chrome.runtime.sendMessage({ type: "GET_ENCRYPTION_KEY" });
+
     if (fjärrNyckel?.wrappedKey) {
-        await visaLösenordsImportDialog(fjärrNyckel);
+        // Prova auto-upplåsning via webbläsarens lösenordshanterare
+        if (window.PasswordCredential) {
+            try {
+                const cred = await navigator.credentials.get({ password: true, mediation: "optional" });
+                if (cred?.password) {
+                    try {
+                        krypteringsNyckel = await importeraNyckelMedLösenord(cred.password, fjärrNyckel);
+                        return;
+                    } catch { /* fel lösenord — faller igenom till manuell dialog */ }
+                }
+            } catch { /* Credential API ej tillgänglig */ }
+        }
+        // Manuell dialog om auto-upplåsning misslyckades
+        await visaLösenordsImportDialog(fjärrNyckel, email);
         return;
     }
+
+    // Ingen nyckel i Firebase → generera ny, håll bara i minnet
     krypteringsNyckel = await crypto.subtle.generateKey(
         { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
     );
-    const exporterad = await crypto.subtle.exportKey("raw", krypteringsNyckel);
-    await chrome.storage.local.set({ aiudaEncryptedKey: bufferTillBase64(exporterad) });
     visaKrypteringsOnboarding();
+}
+
+async function sparaILösenordshanterare(email, lösenord) {
+    if (!window.PasswordCredential || !email) return;
+    try {
+        await navigator.credentials.store(new PasswordCredential({ id: email, password: lösenord }));
+    } catch (e) { console.warn("Kunde inte spara i lösenordshanterare:", e.message); }
 }
 
 async function kryptera(obj) {
@@ -92,7 +108,7 @@ function visaKrypteringsOnboarding() {
     laggTillBubbla("assistant", "🔐 Dina anteckningar krypteras lokalt. Klicka 🔑 för att sätta ett återställningslösenord.");
 }
 
-async function visaLösenordsImportDialog(nyckelData) {
+async function visaLösenordsImportDialog(nyckelData, email) {
     return new Promise(resolve => {
         const dialog = document.createElement("div");
         dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;`;
@@ -111,8 +127,7 @@ async function visaLösenordsImportDialog(nyckelData) {
             if (!lösenord) return;
             try {
                 krypteringsNyckel = await importeraNyckelMedLösenord(lösenord, nyckelData);
-                const raw = await crypto.subtle.exportKey("raw", krypteringsNyckel);
-                await chrome.storage.local.set({ aiudaEncryptedKey: bufferTillBase64(raw) });
+                await sparaILösenordshanterare(email, lösenord); // Spara i lösenordshanteraren
                 dialog.remove(); resolve();
             } catch {
                 const felEl = document.getElementById("import-fel");
@@ -122,15 +137,14 @@ async function visaLösenordsImportDialog(nyckelData) {
         });
         document.getElementById("import-lösenord").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("import-ok").click(); });
         document.getElementById("import-skip").addEventListener("click", async () => {
+            // Ny nyckel — bara i minnet, ingen raw-sparning i storage
             krypteringsNyckel = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
-            const raw = await crypto.subtle.exportKey("raw", krypteringsNyckel);
-            await chrome.storage.local.set({ aiudaEncryptedKey: bufferTillBase64(raw) });
             dialog.remove(); resolve();
         });
     });
 }
 
-async function visaLösenordsDialog() {
+async function visaLösenordsDialog(email) {
     return new Promise(resolve => {
         const dialog = document.createElement("div");
         dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;`;
@@ -153,8 +167,10 @@ async function visaLösenordsDialog() {
             if (lösenord !== lösenord2) { felEl.textContent = "Lösenorden matchar inte"; felEl.style.display = "block"; return; }
             const nyckelData = await exporteraNyckelMedLösenord(lösenord);
             const resultat = await chrome.runtime.sendMessage({ type: "SAVE_ENCRYPTION_KEY", nyckelData });
-            if (resultat?.ok) { dialog.remove(); resolve(true); }
-            else { felEl.textContent = "Kunde inte spara"; felEl.style.display = "block"; }
+            if (resultat?.ok) {
+                await sparaILösenordshanterare(email, lösenord);
+                dialog.remove(); resolve(true);
+            } else { felEl.textContent = "Kunde inte spara"; felEl.style.display = "block"; }
         });
         document.getElementById("lösenord-skip").addEventListener("click", () => { dialog.remove(); resolve(false); });
     });
@@ -164,7 +180,7 @@ async function visaLösenordsDialog() {
 // INIT
 // ============================================================
 
-chrome.storage.local.get(["lang", "tema", "arToken"], async (result) => {
+chrome.storage.local.get(["lang", "tema", "arToken", "arUser"], async (result) => {
     t = AR_LOCALES[result.lang] || AR_LOCALES.sv;
 
     if (!result.arToken) {
@@ -173,7 +189,8 @@ chrome.storage.local.get(["lang", "tema", "arToken"], async (result) => {
         return;
     }
 
-    await laddaEllerSkapaNyckel();
+    const email = result.arUser?.email || null;
+    await laddaEllerSkapaNyckel(email);
     await laddaProjektlista();
 });
 
@@ -779,7 +796,9 @@ chrome.storage.local.get(["mentorNavBredd", "mentorHögerBredd"], (result) => {
 // KRYPTERING-KNAPP & TEMA
 // ============================================================
 
-document.getElementById("kryptering-knapp").addEventListener("click", () => visaLösenordsDialog());
+document.getElementById("kryptering-knapp").addEventListener("click", () => {
+    chrome.storage.local.get("arUser", ({ arUser }) => visaLösenordsDialog(arUser?.email));
+});
 
 // ⋯ info-popup
 document.getElementById("info-knapp").addEventListener("click", (e) => {
