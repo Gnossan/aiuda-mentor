@@ -464,6 +464,10 @@ async function hanteraAISvar(svar, tänker) {
     const searchMatch = assistantText.match(/\[SEARCH:\s*(.+?)\]/);
     if (searchMatch) {
         const query = searchMatch[1].trim();
+        if (query.length < 5) {
+            tänker.remove();
+            return assistantText.replace(/\[SEARCH:\s*.+?\]/g, "").trim() || assistantText;
+        }
         const renText = assistantText.replace(/\[SEARCH:\s*.+?\]/g, "").trim();
 
         if (renText) historik.push({ role: "assistant", content: renText, silent: true });
