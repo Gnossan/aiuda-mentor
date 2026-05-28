@@ -344,12 +344,13 @@ async function öppnaProjekt(projekt) {
     // Ladda historik — försök Firebase först, fall tillbaka på lokal cache
     document.getElementById("meddelanden").innerHTML = "";
     let laddadHistorik = null;
+    let laddadFrånFirebase = false;
 
     try {
         const fjärr = await chrome.runtime.sendMessage({ type: "LOAD_HISTORIK", projektId: sessionId });
         if (fjärr?.krypteradHistorik && krypteringsNyckel) {
             const dekrypterad = await dekryptera(fjärr.krypteradHistorik);
-            if (dekrypterad) laddadHistorik = dekrypterad;
+            if (dekrypterad) { laddadHistorik = dekrypterad; laddadFrånFirebase = true; }
         }
     } catch {}
 
@@ -362,8 +363,9 @@ async function öppnaProjekt(projekt) {
     if (laddadHistorik?.length > 0) {
         historik = laddadHistorik;
         sessionStartIndex = historik.length;
-        // Uppdatera lokal cache med Firebase-data
         await chrome.storage.local.set({ [sessionId]: { namn: projekt.namn, fraga: projekt.fraga, historik } });
+        // Backfill Firebase om historiken kom från lokal cache
+        if (!laddadFrånFirebase) sparaHistorik(true);
         historik.forEach(msg => {
             if (msg.silent) return;
             const text = typeof msg.content === "string" ? msg.content : msg.content[0]?.text || "";
@@ -425,7 +427,7 @@ async function startaKonversation() {
     const assistantText = await hanteraAISvar(svar, tänker);
     laggTillBubbla("assistant", assistantText);
     historik.push({ role: "assistant", content: assistantText });
-    await sparaHistorik();
+    await sparaHistorik(true); // Synka till Firebase direkt vid sessionstart
 }
 
 // --- Historik ---
