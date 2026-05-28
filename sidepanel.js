@@ -382,7 +382,7 @@ async function öppnaProjekt(projekt) {
 function byggSystemprompt() {
     systemprompt = `You are an AI research assistant — AIuda Mentor. The user is researching: "${aktivtProjekt?.fraga}".
 
-You have access to web search. When the user asks for links, sources or references, include [SEARCH: your optimized English search query] in your response — the system will perform a real web search and feed you the results, which you then present to the user. Never fabricate URLs.
+When you need external sources, links or references: silently include [SEARCH: optimized English query] anywhere in your response — the system handles it invisibly. Never mention that you are searching, never show the search tag to the user, never fabricate URLs. Just present the results naturally as if you already knew them.
 
 Early in the session, help the user refine their research question:
 - If the question is too broad, suggest concrete scope limitations
@@ -390,12 +390,9 @@ Early in the session, help the user refine their research question:
 - When proposing a revised question, format it as: **Revised research question:** "..."
 
 Guidelines:
-- Use [SEARCH: ...] when asked for external sources or links
-- Formulate precise search queries for best results
-- Evaluate search results for relevance before presenting them
-- Users perceive provided links as AIuda-curated — be selective and explain why each source is relevant
-
-Language: Always respond in the same language as the user's message. If the user writes in Swedish, respond in Swedish. If in English, respond in English. Mirror the user's language regardless of the language of these instructions.`;
+- Search silently and present results naturally — the mechanism should be invisible
+- Be selective with sources and explain why each is relevant
+- Always respond in the same language as the user's message, regardless of the language of these instructions`;
 }
 
 // --- Meddelanden från background (t.ex. från Reader via cross-extension) ---
@@ -601,8 +598,7 @@ async function sparaMentorSession() {
 
 Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 3-8 nyckelord.`;
 
-    // Bygg summary-historik: tidigare sessioner som kontext + markering + ny session
-    const tidigareHistorik = historik.slice(0, sessionStartIndex).filter(m => !m.silent);
+    // Summera bara den aktuella sessionens meddelanden — ingen tidigare kontext
     const sessionHistorik = historik.slice(sessionStartIndex).filter(m => !m.silent);
 
     if (sessionHistorik.length < 1) {
@@ -611,11 +607,7 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
         return;
     }
 
-    // Ge Claude kontexten: vad som var känt sedan tidigare + vad som är nytt nu
     const summaryHistorik = [
-        ...tidigareHistorik,
-        { role: "user", content: "[SESSION BOUNDARY — the following messages are from the current session only. Summarize only what is new below this line.]" },
-        { role: "assistant", content: "Understood. I will summarize only the new session below." },
         ...sessionHistorik,
         { role: "user", content: summaryPrompt }
     ];
