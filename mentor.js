@@ -626,7 +626,9 @@ document.getElementById("input").addEventListener("keydown", (e) => {
 
 window.addEventListener("paste", (e) => {
     const input = document.getElementById("input");
-    if (!input || !aktivtProjekt || document.activeElement === input) return;
+    const active = document.activeElement;
+    // Om fokus redan är på ett inmatningsfält — låt webbläsaren hantera det normalt
+    if (!input || !aktivtProjekt || active?.tagName === "TEXTAREA" || active?.tagName === "INPUT") return;
     const text = e.clipboardData?.getData("text/plain") || "";
     if (!text) return;
     e.preventDefault();
