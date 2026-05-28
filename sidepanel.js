@@ -547,7 +547,7 @@ function laggTillBubbla(roll, text, skrolla = true) {
     const div = document.createElement("div");
     div.className = `bubbla ${roll}`;
     if (roll === "assistant") {
-        div.innerHTML = marked.parse(text);
+        div.innerHTML = DOMPurify.sanitize(marked.parse(text));
     } else {
         div.textContent = text;
     }
@@ -799,13 +799,13 @@ async function visaProjektVy() {
         return;
     }
 
-    lista.innerHTML = svar.projekt.map(p => `
+    lista.innerHTML = DOMPurify.sanitize(svar.projekt.map(p => `
         <div class="logg-entry" style="cursor:pointer;" data-id="${p.id}" data-namn="${encodeURIComponent(p.namn)}" data-fraga="${encodeURIComponent(p.fraga)}">
             <div class="logg-tidsstampel">${formateraLoggDatum(p.senastSparat)}</div>
             <div class="logg-fraga" style="font-weight:600;margin-bottom:4px;">${p.namn || p.fraga.slice(0, 50)}</div>
             <div style="font-size:11px;opacity:0.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.fraga}</div>
         </div>
-    `).join("");
+    `).join(""));
 
     lista.querySelectorAll(".logg-entry").forEach(el => {
         el.addEventListener("mouseenter", () => el.style.background = "rgba(255,255,255,0.04)");

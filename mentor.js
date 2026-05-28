@@ -202,12 +202,12 @@ async function laddaProjektlista() {
         return;
     }
 
-    lista.innerHTML = svar.projekt.map(p => `
+    lista.innerHTML = DOMPurify.sanitize(svar.projekt.map(p => `
         <div class="projekt-item" data-id="${p.id}" data-namn="${encodeURIComponent(p.namn)}" data-fraga="${encodeURIComponent(p.fraga)}">
             <div class="projekt-item-namn">${p.namn || p.fraga.slice(0, 35)}</div>
             <div class="projekt-item-fraga">${p.fraga}</div>
         </div>
-    `).join("");
+    `).join(""));
 
     lista.querySelectorAll(".projekt-item").forEach(el => {
         el.addEventListener("click", () => {
@@ -422,13 +422,25 @@ function renderaTasks() {
         return;
     }
 
-    lista.innerHTML = tasks.map(task => `
-        <div class="task-item ${task.klar ? 'klar' : ''}" data-id="${task.id}">
-            <input type="checkbox" ${task.klar ? 'checked' : ''} id="task-${task.id}">
-            <label for="task-${task.id}">${task.text}</label>
-            <button class="task-ta-bort" data-id="${task.id}">✕</button>
-        </div>
-    `).join("");
+    lista.innerHTML = "";
+    tasks.forEach(task => {
+        const div = document.createElement("div");
+        div.className = `task-item ${task.klar ? "klar" : ""}`;
+        div.dataset.id = task.id;
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = task.klar;
+        cb.id = `task-${task.id}`;
+        const label = document.createElement("label");
+        label.htmlFor = `task-${task.id}`;
+        label.textContent = task.text;          // textContent — ingen XSS-risk
+        const btn = document.createElement("button");
+        btn.className = "task-ta-bort";
+        btn.dataset.id = task.id;
+        btn.textContent = "✕";
+        div.append(cb, label, btn);
+        lista.appendChild(div);
+    });
 
     lista.querySelectorAll("input[type=checkbox]").forEach(cb => {
         cb.addEventListener("change", () => {
@@ -478,13 +490,13 @@ async function laddaLogg() {
         return { ...e, ...innehåll };
     }));
 
-    loggLista.innerHTML = poster.map(e => `
+    loggLista.innerHTML = DOMPurify.sanitize(poster.map(e => `
         <div class="logg-entry">
             <div class="logg-tidsstampel">${formateraLoggDatum(e.timestamp)}</div>
             <div class="logg-sammanfattning">${e.sammanfattning || ""}</div>
             ${e.nyckelord?.length ? `<div class="logg-nyckelord">${e.nyckelord.map(k => `<span>${k}</span>`).join("")}</div>` : ""}
         </div>
-    `).join("");
+    `).join(""));
 }
 
 function formateraLoggDatum(isoString) {
@@ -686,7 +698,7 @@ async function skicka() {
 function laggTillBubbla(roll, text, skrolla = true) {
     const div = document.createElement("div");
     div.className = `bubbla ${roll}`;
-    if (roll === "assistant") div.innerHTML = marked.parse(text);
+    if (roll === "assistant") div.innerHTML = DOMPurify.sanitize(marked.parse(text));
     else div.textContent = text;
     const container = document.getElementById("meddelanden");
     container.appendChild(div);

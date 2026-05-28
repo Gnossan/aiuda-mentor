@@ -5,22 +5,35 @@ const BACKEND = "https://aiuda-mentor-backend.vercel.app";
 const FIREBASE_API_KEY = "AIzaSyCmClubetYGavOEVHBUHKQ-_sZZdt-LIWc";
 
 // --- Auth ---
+// TODO (K-1): När AIuda Reader publiceras med stabilt extension-ID, ersätt
+// "ids": ["*"] i manifest.json med ["<Readers faktiska extension-ID>"].
+
+const TILLÅTNA_ORIGINS = [
+    "https://annotated-reader-backend.vercel.app",
+    "https://aiuda.se"
+];
+
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+    const frånWebbsida = !sender.id && TILLÅTNA_ORIGINS.includes(sender.origin);
+    const frånExtension = !!sender.id; // TODO: lägg till ID-check när Reader har stabilt ID
+
+    // AUTH_COMPLETE får bara komma från kända webbsidor, aldrig från en annan extension
     if (message.type === "AUTH_COMPLETE") {
+        if (!frånWebbsida) return;
         chrome.storage.local.set({
             arToken: message.token,
             arRefreshToken: message.refreshToken || null,
             arUser: { email: message.email, name: message.name, photo: message.photo }
         });
         sendResponse({ ok: true });
+        return;
     }
 
-    // --- Meddelanden från AIuda Reader ---
+    // LÄGG_TILL_KÄLLA får bara komma från en annan extension (AIuda Reader)
     if (message.type === "LÄGG_TILL_KÄLLA") {
-        // Reader skickar markerad text + URL från aktiv sida
+        if (!frånExtension) return;
         chrome.storage.local.get("researchSessionId", ({ researchSessionId }) => {
             if (!researchSessionId) return;
-            // Öppna sidopanelen och skicka källan dit
             chrome.sidePanel.open({ windowId: sender.tab?.windowId });
             setTimeout(() => {
                 chrome.runtime.sendMessage({
@@ -32,6 +45,7 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
             }, 600);
         });
         sendResponse({ ok: true });
+        return;
     }
 });
 
