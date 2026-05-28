@@ -230,6 +230,7 @@ async function laddaProjektlista() {
 document.getElementById("nytt-projekt-knapp").addEventListener("click", () => {
     document.getElementById("välkommen").style.display = "none";
     document.getElementById("ny-fraga-panel").style.display = "block";
+    document.getElementById("spara-session").style.display = "none";
     document.getElementById("projekt-namn-input").focus();
 });
 
@@ -274,6 +275,7 @@ async function öppnaProjekt(projekt) {
     document.getElementById("ny-fraga-panel").style.display = "none";
     document.getElementById("meddelanden").style.display = "flex";
     document.getElementById("input-area").style.display = "flex";
+    document.getElementById("spara-session").style.display = "inline-block";
 
     byggSystemprompt();
 
@@ -502,6 +504,88 @@ async function sparaHistorik(synkaFirebase = false) {
             chrome.runtime.sendMessage({ type: "SAVE_HISTORIK", data: { projektId: sessionId, namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, krypteradHistorik } });
         } catch (e) { console.warn("Firebase-sync misslyckades:", e.message); }
     }
+}
+
+// ============================================================
+// SPARA SESSION TILL LOGG
+// ============================================================
+
+document.getElementById("spara-session").addEventListener("click", sparaMentorSession);
+
+async function sparaMentorSession() {
+    if (!aktivtProjekt || historik.filter(m => !m.silent).length < 2) return;
+
+    const sparaKnapp = document.getElementById("spara-session");
+    sparaKnapp.textContent = "⏳";
+    sparaKnapp.disabled = true;
+
+    const summaryPrompt = `Summarize THIS SPECIFIC SESSION as a JSON object. Focus on what is NEW — what was explored, decided or discovered in THIS session that wasn't already established. Return ONLY valid JSON, no other text.
+
+{
+  "sammanfattning": "2-3 sentences about what was NEW in this session — new arguments, new distinctions, new directions taken",
+  "insikter": ["new insight specific to this session", "new decision or turn taken"],
+  "kallor": [{"title": "source title", "url": "https://..."}],
+  "nyckelord": ["keyword1", "keyword2"]
+}
+
+Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 3-8 nyckelord.`;
+
+    const sessionHistorik = historik.slice(sessionStartIndex).filter(m => !m.silent);
+
+    if (sessionHistorik.length < 1) {
+        sparaKnapp.textContent = "–";
+        setTimeout(() => { sparaKnapp.textContent = "💾"; sparaKnapp.disabled = false; }, 1500);
+        return;
+    }
+
+    const summaryHistorik = [
+        ...sessionHistorik,
+        { role: "user", content: summaryPrompt }
+    ];
+
+    const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik: summaryHistorik });
+    const rawText = svar?.result?.content?.[0]?.text || "";
+
+    let parsed = {};
+    try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    } catch (e) {
+        parsed = { sammanfattning: rawText.slice(0, 300) };
+    }
+
+    const känsligtInnehåll = {
+        sammanfattning: parsed.sammanfattning || "",
+        insikter: parsed.insikter || [],
+        kallor: parsed.kallor || [],
+        nyckelord: parsed.nyckelord || []
+    };
+    const krypteratInnehåll = krypteringsNyckel ? await kryptera(känsligtInnehåll) : JSON.stringify(känsligtInnehåll);
+
+    const entry = {
+        fraga: aktivtProjekt.fraga,
+        namn: aktivtProjekt.namn,
+        projektId: sessionId,
+        sessionId: nuvarandeSessionId,
+        krypterat: krypteratInnehåll
+    };
+
+    const resultat = await chrome.runtime.sendMessage({ type: "SAVE_MENTOR_LOG", entry });
+
+    if (resultat?.id) {
+        sparaKnapp.textContent = "✓";
+        sparaKnapp.classList.add("aktiv");
+        // Uppdatera logg-fliken om den är öppen
+        laddaLogg();
+    } else {
+        sparaKnapp.textContent = "✗";
+        console.error("Fel vid logg-sparande:", resultat?.error);
+    }
+    setTimeout(() => {
+        sparaKnapp.textContent = "💾";
+        sparaKnapp.disabled = false;
+        sparaKnapp.classList.remove("aktiv");
+    }, 2000);
 }
 
 async function hanteraAISvar(svar, tänker) {
