@@ -137,6 +137,22 @@
             position: relative;
         }
 
+        .chatt-header-knapp {
+            display: none;
+            background: transparent;
+            border: none;
+            color: #f5f0e8;
+            opacity: 0.5;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 2px 4px;
+            line-height: 1;
+            transition: opacity 0.15s;
+        }
+        .chatt-header-knapp:hover { opacity: 1; }
+        .info-knapp-stil { font-size: 14px; opacity: 0.3; }
+        .info-knapp-stil:hover { opacity: 0.7; }
+
         #info-popup {
             display: none;
             position: absolute;
@@ -476,8 +492,8 @@
     <div id="chatt-header">
         <div id="projekt-namn-chatt">—</div>
         <div id="projekt-fraga-chatt"></div>
-        <button id="spara-session" title="Spara session till logg" style="display:none;background:transparent;border:none;color:#f5f0e8;opacity:0.5;font-size:16px;cursor:pointer;padding:2px 4px;line-height:1;transition:opacity 0.15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">💾</button>
-        <button id="info-knapp" title="Visa projekt-ID" style="display:none;background:transparent;border:none;color:#f5f0e8;opacity:0.3;font-size:14px;cursor:pointer;padding:2px 4px;line-height:1;transition:opacity 0.15s;" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=0.3">⋯</button>
+        <button id="spara-session" title="Spara session till logg" class="chatt-header-knapp">💾</button>
+        <button id="info-knapp" title="Visa projekt-ID" class="chatt-header-knapp info-knapp-stil">⋯</button>
         <div id="info-popup">
             <div><span class="info-etikett">Projekt-ID</span><span class="info-värde" id="info-projekt-id">—</span></div>
             <div><span class="info-etikett">Sessions-ID</span><span class="info-värde" id="info-session-id">—</span></div>
