@@ -18,11 +18,23 @@
             overflow: hidden;
         }
 
+        /* ===== DRAG-HANDLE ===== */
+        .resizer {
+            width: 4px;
+            background: #333;
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.15s;
+            z-index: 10;
+        }
+        .resizer:hover, .resizer.dragging { background: #f0c040; }
+
         /* ===== VÄNSTER KOLUMN — Navigation ===== */
         #nav {
             width: 240px;
-            min-width: 240px;
-            border-right: 1px solid #333;
+            min-width: 160px;
+            max-width: 400px;
+            border-right: none;
             display: flex;
             flex-direction: column;
             background: #141210;
@@ -193,7 +205,8 @@
         /* ===== HÖGER KOLUMN — Anteckningar + Tasks ===== */
         #höger {
             width: 300px;
-            min-width: 300px;
+            min-width: 200px;
+            max-width: 600px;
             display: flex;
             flex-direction: column;
         }
@@ -435,6 +448,8 @@
     </div>
 </div>
 
+<div class="resizer" id="resizer-vänster"></div>
+
 <!-- MITTEN: Chatt -->
 <div id="chatt">
     <div id="chatt-header">
@@ -467,6 +482,8 @@
         <button id="skicka">→</button>
     </div>
 </div>
+
+<div class="resizer" id="resizer-höger"></div>
 
 <!-- HÖGER: Anteckningar, Tasks, Logg -->
 <div id="höger">
