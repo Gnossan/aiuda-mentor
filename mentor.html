@@ -134,7 +134,28 @@
             padding: 12px 20px;
             border-bottom: 1px solid #333;
             flex-shrink: 0;
+            position: relative;
         }
+
+        #info-popup {
+            display: none;
+            position: absolute;
+            top: 44px;
+            right: 16px;
+            background: #2a2218;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 11px;
+            color: #f5f0e8;
+            opacity: 0.85;
+            z-index: 100;
+            white-space: nowrap;
+            line-height: 1.9;
+        }
+
+        #info-popup .info-etikett { opacity: 0.45; margin-right: 6px; }
+        #info-popup .info-värde { font-family: monospace; opacity: 0.75; }
 
         #projekt-namn-chatt {
             font-size: 13px;
@@ -456,6 +477,11 @@
         <div id="projekt-namn-chatt">—</div>
         <div id="projekt-fraga-chatt"></div>
         <button id="spara-session" title="Spara session till logg" style="display:none;background:transparent;border:none;color:#f5f0e8;opacity:0.5;font-size:16px;cursor:pointer;padding:2px 4px;line-height:1;transition:opacity 0.15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">💾</button>
+        <button id="info-knapp" title="Visa projekt-ID" style="display:none;background:transparent;border:none;color:#f5f0e8;opacity:0.3;font-size:14px;cursor:pointer;padding:2px 4px;line-height:1;transition:opacity 0.15s;" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=0.3">⋯</button>
+        <div id="info-popup">
+            <div><span class="info-etikett">Projekt-ID</span><span class="info-värde" id="info-projekt-id">—</span></div>
+            <div><span class="info-etikett">Sessions-ID</span><span class="info-värde" id="info-session-id">—</span></div>
+        </div>
     </div>
 
     <div id="login-vy">

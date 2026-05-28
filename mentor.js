@@ -276,6 +276,9 @@ async function öppnaProjekt(projekt) {
     document.getElementById("meddelanden").style.display = "flex";
     document.getElementById("input-area").style.display = "flex";
     document.getElementById("spara-session").style.display = "inline-block";
+    document.getElementById("info-knapp").style.display = "inline-block";
+    document.getElementById("info-projekt-id").textContent = sessionId;
+    document.getElementById("info-session-id").textContent = nuvarandeSessionId;
 
     byggSystemprompt();
 
@@ -765,6 +768,17 @@ chrome.storage.local.get(["mentorNavBredd", "mentorHögerBredd"], (result) => {
 // ============================================================
 
 document.getElementById("kryptering-knapp").addEventListener("click", () => visaLösenordsDialog());
+
+// ⋯ info-popup
+document.getElementById("info-knapp").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const popup = document.getElementById("info-popup");
+    popup.style.display = popup.style.display === "block" ? "none" : "block";
+});
+
+document.addEventListener("click", () => {
+    document.getElementById("info-popup").style.display = "none";
+});
 
 document.getElementById("tema-knapp").addEventListener("click", () => {
     document.body.classList.toggle("ljust");
