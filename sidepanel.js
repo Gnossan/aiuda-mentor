@@ -498,6 +498,21 @@ document.getElementById("input").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); }
 });
 
+// --- Fånga paste globalt och dirigera till textfältet ---
+window.addEventListener("paste", (e) => {
+    const input = document.getElementById("input");
+    if (!input || !aktivtProjekt) return;
+    if (document.activeElement === input) return; // Redan i textfältet, låt default gälla
+    const text = e.clipboardData?.getData("text/plain") || "";
+    if (!text) return;
+    e.preventDefault();
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    input.value = input.value.slice(0, start) + text + input.value.slice(end);
+    input.selectionStart = input.selectionEnd = start + text.length;
+    input.focus();
+});
+
 async function skicka() {
     const input = document.getElementById("input");
     const text = input.value.trim();
