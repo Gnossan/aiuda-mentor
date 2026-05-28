@@ -262,7 +262,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-// --- Öppna sidopanelen via action-klick ---
+// --- Öppna Mentor-fönstret via action-klick ---
 chrome.action.onClicked.addListener((tab) => {
-    chrome.sidePanel.open({ windowId: tab.windowId });
+    chrome.windows.create({
+        url: chrome.runtime.getURL("mentor.html"),
+        type: "popup",
+        width: 1200,
+        height: 800
+    });
 });

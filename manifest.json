@@ -20,7 +20,8 @@
         "storage",
         "sidePanel",
         "search",
-        "tabs"
+        "tabs",
+        "windows"
     ],
     "host_permissions": [
         "https://aiuda-mentor-backend.vercel.app/*",

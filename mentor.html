@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>AIuda Mentor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            display: flex;
+            height: 100vh;
+            background: #1a1610;
+            color: #f5f0e8;
+            overflow: hidden;
+        }
+
+        /* ===== VÄNSTER KOLUMN — Navigation ===== */
+        #nav {
+            width: 240px;
+            min-width: 240px;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            background: #141210;
+        }
+
+        #nav-header {
+            padding: 16px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #nav-header .logo {
+            font-size: 12px;
+            color: #f0c040;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        #nav-header-knappar {
+            display: flex;
+            gap: 4px;
+        }
+
+        #nav-header-knappar button {
+            background: none;
+            border: 1px solid #333;
+            color: #f5f0e8;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 3px 7px;
+            font-size: 11px;
+            opacity: 0.6;
+            font-family: inherit;
+        }
+
+        #nav-header-knappar button:hover { opacity: 1; }
+
+        #nytt-projekt-knapp {
+            margin: 12px;
+            padding: 8px;
+            background: #f0c040;
+            color: #1a1610;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            font-family: inherit;
+            width: calc(100% - 24px);
+        }
+
+        #projekt-liste {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+
+        .projekt-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            transition: background 0.1s;
+        }
+
+        .projekt-item:hover { background: rgba(255,255,255,0.04); }
+        .projekt-item.aktiv { border-left-color: #f0c040; background: rgba(240,192,64,0.06); }
+
+        .projekt-item-namn {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .projekt-item-fraga {
+            font-size: 10px;
+            opacity: 0.5;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ===== MITTEN KOLUMN — Chatt ===== */
+        #chatt {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+            min-width: 0;
+        }
+
+        #chatt-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        #projekt-namn-chatt {
+            font-size: 13px;
+            font-weight: 600;
+            color: #f0c040;
+            margin-bottom: 2px;
+        }
+
+        #projekt-fraga-chatt {
+            font-size: 11px;
+            opacity: 0.5;
+        }
+
+        #meddelanden {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .bubbla {
+            padding: 12px 14px;
+            border-radius: 8px;
+            line-height: 1.55;
+            max-width: 85%;
+            white-space: pre-wrap;
+        }
+
+        .bubbla.user { background: #2a2218; align-self: flex-end; }
+        .bubbla.assistant { background: #372d20; align-self: flex-start; }
+
+        #input-area {
+            padding: 14px 20px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        #input {
+            flex: 1;
+            padding: 10px;
+            background: #2a2218;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #f5f0e8;
+            font-size: 13px;
+            font-family: inherit;
+            resize: none;
+            height: 72px;
+        }
+
+        #skicka {
+            padding: 10px 16px;
+            background: #f0c040;
+            color: #1a1610;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            align-self: flex-end;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        /* ===== HÖGER KOLUMN — Anteckningar + Tasks ===== */
+        #höger {
+            width: 300px;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #höger-flikar {
+            display: flex;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        .flik {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            cursor: pointer;
+            opacity: 0.4;
+            border-bottom: 2px solid transparent;
+            transition: opacity 0.15s;
+        }
+
+        .flik:hover { opacity: 0.7; }
+        .flik.aktiv { opacity: 1; border-bottom-color: #f0c040; color: #f0c040; }
+
+        .flik-vy { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+        .flik-vy.aktiv { display: flex; }
+
+        /* Anteckningar */
+        #anteckningar-area {
+            flex: 1;
+            padding: 14px;
+            background: #2a2218;
+            border: none;
+            color: #f5f0e8;
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            resize: none;
+            line-height: 1.6;
+            outline: none;
+        }
+
+        #spara-anteckningar {
+            padding: 8px 14px;
+            margin: 10px;
+            background: transparent;
+            border: 1px solid #444;
+            color: #f5f0e8;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+            opacity: 0.6;
+            flex-shrink: 0;
+        }
+
+        #spara-anteckningar:hover { opacity: 1; }
+        #spara-anteckningar.sparad { border-color: #f0c040; color: #f0c040; opacity: 1; }
+
+        /* Tasks */
+        #tasks-vy {
+            overflow-y: auto;
+        }
+
+        #ny-task-area {
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        #ny-task-input {
+            flex: 1;
+            padding: 7px;
+            background: #2a2218;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: #f5f0e8;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        #lägg-till-task {
+            padding: 7px 10px;
+            background: #f0c040;
+            color: #1a1610;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        #task-lista {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .task-item input[type="checkbox"] {
+            margin-top: 2px;
+            accent-color: #f0c040;
+            flex-shrink: 0;
+        }
+
+        .task-item label {
+            font-size: 12px;
+            line-height: 1.4;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .task-item.klar label {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        .task-ta-bort {
+            background: none;
+            border: none;
+            color: #f5f0e8;
+            cursor: pointer;
+            opacity: 0.3;
+            font-size: 12px;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .task-ta-bort:hover { opacity: 0.7; }
+
+        /* Logg-flik */
+        #logg-lista {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .logg-entry {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            font-size: 11px;
+        }
+
+        .logg-entry:last-child { border-bottom: none; }
+        .logg-tidsstampel { opacity: 0.4; margin-bottom: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .logg-sammanfattning { line-height: 1.5; margin-bottom: 6px; }
+        .logg-nyckelord { display: flex; flex-wrap: wrap; gap: 3px; }
+        .logg-nyckelord span { font-size: 10px; padding: 1px 5px; border-radius: 8px; background: rgba(240,192,64,0.12); color: #f0c040; }
+
+        /* Välkommen/ny projekt */
+        #välkommen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 16px;
+            padding: 40px;
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        #välkommen .rubrik { font-size: 15px; font-weight: 600; color: #f0c040; }
+        #välkommen .beskrivning { font-size: 12px; line-height: 1.6; opacity: 0.8; }
+
+        #ny-fraga-panel {
+            display: none;
+            padding: 20px;
+            background: #2a2218;
+            border-bottom: 1px solid #333;
+        }
+
+        #ny-fraga-panel .rubrik { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+        #projekt-namn-input, #fraga-input { width: 100%; padding: 8px; background: #1a1610; border: 1px solid #444; border-radius: 5px; color: #f5f0e8; font-family: inherit; font-size: 12px; margin-bottom: 8px; }
+        #fraga-input { height: 80px; resize: none; line-height: 1.4; }
+        #projekt-namn-input:focus, #fraga-input:focus { outline: none; border-color: #f0c040; }
+        #starta-knapp { width: 100%; padding: 9px; background: #f0c040; color: #1a1610; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-family: inherit; }
+
+        /* Animationer */
+        @keyframes studsa {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+            40% { transform: translateY(-5px); opacity: 1; }
+        }
+        .ar-tänker { display: flex; gap: 5px; padding: 10px 12px; align-self: flex-start; }
+        .ar-tänker span { width: 7px; height: 7px; border-radius: 50%; background: #f5f0e8; animation: studsa 1.2s infinite ease-in-out; }
+        .ar-tänker span:nth-child(2) { animation-delay: 0.2s; }
+        .ar-tänker span:nth-child(3) { animation-delay: 0.4s; }
+
+        /* Markdown */
+        .bubbla h1, .bubbla h2, .bubbla h3 { font-size: 13px; font-weight: 600; margin: 8px 0 4px; }
+        .bubbla p { margin: 0 0 6px; }
+        .bubbla p:last-child { margin-bottom: 0; }
+        .bubbla ul, .bubbla ol { padding-left: 16px; margin: 4px 0; }
+        .bubbla li { margin-bottom: 2px; }
+        .bubbla strong { font-weight: 600; }
+        .bubbla em { font-style: italic; }
+        .bubbla a { color: #f0c040; }
+        .bubbla code { font-family: 'DM Mono', monospace; font-size: 11px; background: rgba(0,0,0,0.2); padding: 1px 4px; border-radius: 3px; }
+        .bubbla pre { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 6px 0; }
+        .bubbla hr { border: none; border-top: 1px solid rgba(255,255,255,0.15); margin: 8px 0; }
+
+        /* Login */
+        #login-vy {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 40px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<!-- VÄNSTER: Navigation -->
+<div id="nav">
+    <div id="nav-header">
+        <span class="logo">AIuda Mentor</span>
+        <div id="nav-header-knappar">
+            <button id="kryptering-knapp" title="Krypteringsinställningar">🔑</button>
+            <button id="tema-knapp" title="Byt tema">☀</button>
+        </div>
+    </div>
+    <button id="nytt-projekt-knapp">＋ Nytt projekt</button>
+    <div id="projekt-liste">
+        <div style="padding:12px 16px;font-size:11px;opacity:0.3;">Laddar projekt…</div>
+    </div>
+</div>
+
+<!-- MITTEN: Chatt -->
+<div id="chatt">
+    <div id="chatt-header">
+        <div id="projekt-namn-chatt">—</div>
+        <div id="projekt-fraga-chatt"></div>
+    </div>
+
+    <div id="login-vy">
+        <div style="font-size:14px;font-weight:600;color:#f0c040;">AIuda Mentor</div>
+        <div style="font-size:12px;opacity:0.7;line-height:1.6;">Logga in för att använda din research-assistent.</div>
+        <button id="login-knapp" style="padding:10px 20px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit;">Logga in</button>
+    </div>
+
+    <div id="välkommen">
+        <div class="rubrik">Välkommen till AIuda Mentor</div>
+        <div class="beskrivning">Välj ett projekt till vänster<br>eller skapa ett nytt.</div>
+    </div>
+
+    <div id="ny-fraga-panel">
+        <div class="rubrik">Nytt projekt</div>
+        <input id="projekt-namn-input" type="text" placeholder="Projektnamn">
+        <textarea id="fraga-input" placeholder="Din frågeställning…"></textarea>
+        <button id="starta-knapp">Starta →</button>
+    </div>
+
+    <div id="meddelanden" style="display:none;"></div>
+
+    <div id="input-area" style="display:none;">
+        <textarea id="input" placeholder="Ställ en fråga…"></textarea>
+        <button id="skicka">→</button>
+    </div>
+</div>
+
+<!-- HÖGER: Anteckningar, Tasks, Logg -->
+<div id="höger">
+    <div id="höger-flikar">
+        <div class="flik aktiv" data-flik="anteckningar">📝 Notat</div>
+        <div class="flik" data-flik="tasks">✅ Tasks</div>
+        <div class="flik" data-flik="logg">📋 Logg</div>
+    </div>
+
+    <!-- Anteckningar -->
+    <div class="flik-vy aktiv" id="vy-anteckningar">
+        <textarea id="anteckningar-area" placeholder="Anteckningar, citat, randanmärkningar…"></textarea>
+        <button id="spara-anteckningar">Spara</button>
+    </div>
+
+    <!-- Tasks -->
+    <div class="flik-vy" id="vy-tasks">
+        <div id="ny-task-area">
+            <input id="ny-task-input" type="text" placeholder="Ny uppföljning eller task…">
+            <button id="lägg-till-task">＋</button>
+        </div>
+        <div id="task-lista"></div>
+    </div>
+
+    <!-- Logg -->
+    <div class="flik-vy" id="vy-logg">
+        <div id="logg-lista">
+            <div style="opacity:0.4;font-size:11px;padding:12px;">Välj ett projekt för att se loggen.</div>
+        </div>
+    </div>
+</div>
+
+<script src="marked.min.js"></script>
+<script src="locales.js"></script>
+<script src="mentor.js"></script>
+</body>
+</html>
