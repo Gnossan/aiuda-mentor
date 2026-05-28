@@ -687,7 +687,7 @@ document.getElementById("skicka").addEventListener("click", () => skicka());
 document.getElementById("skicka-kort").addEventListener("click", () => skicka(true));
 document.getElementById("input").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); }
-    if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); skicka(true); }
+    // Shift+Enter = ny rad (webbläsarens standardbeteende)
 });
 
 window.addEventListener("paste", (e) => {
