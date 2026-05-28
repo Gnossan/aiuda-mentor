@@ -393,7 +393,9 @@ Guidelines:
 - Use [SEARCH: ...] when asked for external sources or links
 - Formulate precise search queries for best results
 - Evaluate search results for relevance before presenting them
-- Users perceive provided links as AIuda-curated — be selective and explain why each source is relevant`;
+- Users perceive provided links as AIuda-curated — be selective and explain why each source is relevant
+
+Language: Always respond in the same language as the user's message. If the user writes in Swedish, respond in Swedish. If in English, respond in English. Mirror the user's language regardless of the language of these instructions.`;
 }
 
 // --- Meddelanden från background (t.ex. från Reader via cross-extension) ---
