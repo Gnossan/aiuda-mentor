@@ -681,9 +681,11 @@ function tolkSvar(svar) {
     return svar?.result?.content?.[0]?.text || "Något gick fel.";
 }
 
-document.getElementById("skicka").addEventListener("click", skicka);
+document.getElementById("skicka").addEventListener("click", () => skicka());
+document.getElementById("skicka-kort").addEventListener("click", () => skicka(true));
 document.getElementById("input").addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); }
+    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) { e.preventDefault(); skicka(); }
+    if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); skicka(true); }
 });
 
 window.addEventListener("paste", (e) => {
@@ -701,12 +703,15 @@ window.addEventListener("paste", (e) => {
     input.focus();
 });
 
-async function skicka() {
+async function skicka(kort = false) {
     const input = document.getElementById("input");
     const text = input.value.trim();
     if (!text || !aktivtProjekt) return;
     laggTillBubbla("user", text);
-    historik.push({ role: "user", content: text });
+    const innehåll = kort
+        ? `${text}\n\n[Kort reflektion — svara måttligt, lägg inte ut till ett nytt ämne]`
+        : text;
+    historik.push({ role: "user", content: innehåll });
     input.value = "";
     await sparaHistorik();
     const tänker = visaTänker();

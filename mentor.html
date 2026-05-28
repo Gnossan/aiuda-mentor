@@ -226,6 +226,13 @@
             height: 72px;
         }
 
+        #skicka-knappar {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-self: flex-end;
+        }
+
         #skicka {
             padding: 10px 16px;
             background: #f0c040;
@@ -234,10 +241,23 @@
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
-            align-self: flex-end;
             font-family: inherit;
             font-size: 14px;
         }
+
+        #skicka-kort {
+            padding: 6px 16px;
+            background: transparent;
+            color: #f5f0e8;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            opacity: 0.6;
+            transition: opacity 0.15s;
+        }
+        #skicka-kort:hover { opacity: 1; }
 
         /* ===== HÖGER KOLUMN — Anteckningar + Tasks ===== */
         #höger {
@@ -522,7 +542,10 @@
 
     <div id="input-area" style="display:none;">
         <textarea id="input" placeholder="Ställ en fråga…"></textarea>
-        <button id="skicka">→</button>
+        <div id="skicka-knappar">
+            <button id="skicka-kort" title="Kort svar">·→</button>
+            <button id="skicka">→</button>
+        </div>
     </div>
 </div>
 
