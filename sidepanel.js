@@ -755,14 +755,14 @@ async function visaLogg() {
         return { ...e, ...innehåll };
     }));
 
-    innehall.innerHTML = poster.map(e => `
+    innehall.innerHTML = DOMPurify.sanitize(poster.map(e => `
         <div class="logg-entry">
             <div class="logg-tidsstampel">${formateraLoggDatum(e.timestamp)}</div>
             <div class="logg-sammanfattning">${e.sammanfattning || ""}</div>
             ${e.insikter?.length ? `<ul class="logg-insikter">${e.insikter.map(i => `<li>${i}</li>`).join("")}</ul>` : ""}
             ${e.nyckelord?.length ? `<div class="logg-nyckelord">${e.nyckelord.map(k => `<span>${k}</span>`).join("")}</div>` : ""}
         </div>
-    `).join("");
+    `).join(""));
 }
 
 // --- Projekt-vy ---

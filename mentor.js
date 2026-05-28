@@ -617,7 +617,12 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
         kallor: parsed.kallor || [],
         nyckelord: parsed.nyckelord || []
     };
-    const krypteratInnehåll = krypteringsNyckel ? await kryptera(känsligtInnehåll) : JSON.stringify(känsligtInnehåll);
+    if (!krypteringsNyckel) {
+        laggTillBubbla("assistant", "⚠️ Kan inte spara — krypteringsnyckeln saknas. Klicka 🔑 för att sätta ett återställningslösenord.");
+        sparaKnapp.textContent = "💾"; sparaKnapp.disabled = false;
+        return;
+    }
+    const krypteratInnehåll = await kryptera(känsligtInnehåll);
 
     const entry = {
         fraga: aktivtProjekt.fraga,
