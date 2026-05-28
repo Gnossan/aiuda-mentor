@@ -684,8 +684,8 @@ function tolkSvar(svar) {
 document.getElementById("skicka").addEventListener("click", () => skicka());
 document.getElementById("skicka-kort").addEventListener("click", () => skicka(true));
 document.getElementById("input").addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) { e.preventDefault(); skicka(); }
-    if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); skicka(true); }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); }
+    if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); skicka(true); }
 });
 
 window.addEventListener("paste", (e) => {
