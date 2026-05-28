@@ -337,27 +337,52 @@ Always respond in the same language as the user's message.`;
 // ============================================================
 
 async function laddaAnteckningarOchTasks() {
+    // Försök ladda från Firebase om nyckel finns
+    if (krypteringsNyckel) {
+        try {
+            const fjärr = await chrome.runtime.sendMessage({ type: "LOAD_ANTECKNINGAR", projektId: sessionId });
+            if (fjärr?.krypteradAnteckningar) {
+                const dekrypterad = await dekryptera(fjärr.krypteradAnteckningar);
+                document.getElementById("anteckningar-area").value = dekrypterad.anteckningar || "";
+                anteckningarSparade = dekrypterad.anteckningar || "";
+                tasks = dekrypterad.tasks || [];
+                renderaTasks();
+                // Backfill lokalt cache
+                await chrome.storage.local.set({
+                    [`anteckningar_${sessionId}`]: { anteckningar: dekrypterad.anteckningar || "", tasks: dekrypterad.tasks || [] }
+                });
+                return;
+            }
+        } catch (e) { console.warn("Firebase-laddning av anteckningar misslyckades:", e.message); }
+    }
+
+    // Fallback: lokalt
     const sparad = await chrome.storage.local.get(`anteckningar_${sessionId}`);
     const data = sparad[`anteckningar_${sessionId}`] || {};
-
-    // Anteckningar
     document.getElementById("anteckningar-area").value = data.anteckningar || "";
     anteckningarSparade = data.anteckningar || "";
-
-    // Tasks
     tasks = data.tasks || [];
     renderaTasks();
 }
 
-async function sparaAnteckningarOchTasks() {
+async function sparaAnteckningarOchTasks(synkaFirebase = false) {
     const anteckningar = document.getElementById("anteckningar-area").value;
     await chrome.storage.local.set({
         [`anteckningar_${sessionId}`]: { anteckningar, tasks }
     });
+    if (synkaFirebase && krypteringsNyckel) {
+        try {
+            const krypteradAnteckningar = await kryptera({ anteckningar, tasks });
+            chrome.runtime.sendMessage({
+                type: "SAVE_ANTECKNINGAR",
+                data: { projektId: sessionId, krypteradAnteckningar }
+            });
+        } catch (e) { console.warn("Firebase-sync av anteckningar misslyckades:", e.message); }
+    }
 }
 
 document.getElementById("spara-anteckningar").addEventListener("click", async () => {
-    await sparaAnteckningarOchTasks();
+    await sparaAnteckningarOchTasks(true);   // synka till Firebase
     const knapp = document.getElementById("spara-anteckningar");
     knapp.textContent = "Sparat ✓";
     knapp.classList.add("sparad");
@@ -384,7 +409,7 @@ function läggTillTask() {
     tasks.push({ id: Date.now(), text, klar: false });
     input.value = "";
     renderaTasks();
-    sparaAnteckningarOchTasks();
+    sparaAnteckningarOchTasks(true);
 }
 
 function renderaTasks() {
@@ -406,7 +431,7 @@ function renderaTasks() {
         cb.addEventListener("change", () => {
             const id = parseInt(cb.closest(".task-item").dataset.id);
             const task = tasks.find(t => t.id === id);
-            if (task) { task.klar = cb.checked; renderaTasks(); sparaAnteckningarOchTasks(); }
+            if (task) { task.klar = cb.checked; renderaTasks(); sparaAnteckningarOchTasks(true); }
         });
     });
 
@@ -415,7 +440,7 @@ function renderaTasks() {
             const id = parseInt(btn.dataset.id);
             tasks = tasks.filter(t => t.id !== id);
             renderaTasks();
-            sparaAnteckningarOchTasks();
+            sparaAnteckningarOchTasks(true);
         });
     });
 }

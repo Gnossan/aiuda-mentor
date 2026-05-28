@@ -205,6 +205,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === "SAVE_ANTECKNINGAR") {
+        hämtaToken().then(token => {
+            if (!token) { sendResponse({ error: "Ej inloggad" }); return; }
+            fetchMedToken(`${BACKEND}/api/projekt-historik`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(message.data)
+            }, token).then(async r => { const data = await r.json(); sendResponse(data); })
+            .catch(e => sendResponse({ error: e.message }));
+        });
+        return true;
+    }
+
+    if (message.type === "LOAD_ANTECKNINGAR") {
+        hämtaToken().then(token => {
+            if (!token) { sendResponse({ error: "Ej inloggad" }); return; }
+            fetchMedToken(`${BACKEND}/api/projekt-historik?projektId=${encodeURIComponent(message.projektId)}`,
+                { method: "GET" }, token)
+                .then(async r => {
+                    if (r.status === 404) { sendResponse({ ej_hittad: true }); return; }
+                    const data = await r.json();
+                    sendResponse({ krypteradAnteckningar: data.krypteradAnteckningar });
+                }).catch(e => sendResponse({ error: e.message }));
+        });
+        return true;
+    }
+
     if (message.type === "TOOLBAR_SEARCH") {
         chrome.search.query({ text: message.query, disposition: "NEW_TAB" });
         sendResponse({});
