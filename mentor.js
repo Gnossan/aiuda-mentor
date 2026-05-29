@@ -710,10 +710,11 @@ async function skicka(kort = false) {
     const text = input.value.trim();
     if (!text || !aktivtProjekt) return;
     laggTillBubbla("user", text);
-    const innehåll = kort
-        ? `${text}\n\n[Kort reflektion — svara måttligt, lägg inte ut till ett nytt ämne]`
-        : text;
-    historik.push({ role: "user", content: innehåll });
+    historik.push({ role: "user", content: text });
+    if (kort) {
+        // Engångsinstruktion — silent:true så den inte påverkar framtida svar
+        historik.push({ role: "user", content: "[Kort reflektion — svara måttligt, lägg inte ut till ett nytt ämne]", silent: true });
+    }
     input.value = "";
     await sparaHistorik();
     const tänker = visaTänker();
