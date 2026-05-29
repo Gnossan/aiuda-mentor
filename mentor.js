@@ -885,14 +885,16 @@ function laggTillBubbla(roll, text, skrolla = true, tid = null) {
     div.className = `bubbla ${roll}`;
     if (roll === "assistant") div.innerHTML = DOMPurify.sanitize(marked.parse(text));
     else div.textContent = text;
+    const container = document.getElementById("meddelanden");
+    container.appendChild(div);
+
     if (tid) {
         const tidEl = document.createElement("div");
         tidEl.className = "bubbla-tid";
         tidEl.textContent = formateraBubblaTid(tid);
-        div.appendChild(tidEl);
+        container.appendChild(tidEl);
     }
-    const container = document.getElementById("meddelanden");
-    container.appendChild(div);
+
     if (skrolla) {
         if (roll === "assistant") div.scrollIntoView({ behavior: "smooth", block: "start" });
         else container.scrollTop = container.scrollHeight;

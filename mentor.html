@@ -499,8 +499,16 @@
         .ar-tänker span:nth-child(3) { animation-delay: 0.4s; }
 
         /* Markdown */
-        .bubbla-tid { font-size: 10px; opacity: 0.35; margin-top: 5px; text-align: right; }
-        .bubbla.assistant .bubbla-tid { text-align: left; }
+        .bubbla-tid {
+            font-size: 9px;
+            opacity: 0.3;
+            color: #f5f0e8;
+            margin-top: 3px;
+            margin-bottom: 6px;
+        }
+        .bubbla.user + .bubbla-tid { text-align: right; }
+        .bubbla.assistant + .bubbla-tid { text-align: left; }
+        body.ljust .bubbla-tid { color: #2a2218; }
 
         .bubbla h1, .bubbla h2, .bubbla h3 { font-size: 13px; font-weight: 600; margin: 8px 0 4px; }
         .bubbla p { margin: 0 0 6px; }
