@@ -1291,7 +1291,7 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
                 const resp = await fetch("https://annotated-reader-backend.vercel.app/api/word-lookup-free", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ word: text, lang: "sv" })
+                    body: JSON.stringify({ word: text, lang: t?.datumLocale?.split("-")[0] || "en" })
                 });
                 const data = await resp.json();
                 if (data.definition) {
