@@ -105,7 +105,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === "CHAT") {
         chrome.storage.local.get(["modell", "temperature"], async (result) => {
-            const modell = result.modell || "claude-opus-4-7";
+            const modell = result.modell || "claude-sonnet-4-6";
             const temperature = result.temperature ?? 1.0;
             const token = await hämtaToken();
             if (!token) { sendResponse({ error: "Ej inloggad" }); return; }
@@ -240,7 +240,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 .then(async r => {
                     if (r.status === 404) { sendResponse({ ej_hittad: true }); return; }
                     const data = await r.json();
-                    sendResponse({ krypteradAnteckningar: data.krypteradAnteckningar });
+                    sendResponse({ krypteradAnteckningar: data.krypteradAnteckningar, krypteradeKällor: data.krypteradeKällor });
                 }).catch(e => sendResponse({ error: e.message }));
         });
         return true;
