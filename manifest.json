@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "AIuda Mentor",
-    "version": "0.3.8",
+    "version": "0.4.0",
     "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt3njofeTNHVzH3IB190FPMHBBZNlWd0tiexXuAZWJyBFfwQb76tGb+B93aFysXMoNbpNF/rzEBG6pYz2Y0WreVT7kQb2oUPLC2A303ZpV3ytQrd/ljvEGQZQ79IE//lFBwejPpO+SXVn0fcWm/5d/XYsduLKdqL4ElVzUH3TqLZK+DGdgH7DUaKeMS6bPpCRjtAG4/O0BV5muJpPhoNUaG2KILf9nqoVltzOt4I46+oHz6vAmsKqZwxH1QUOgU3QNGVPecOy8fv6OiMuLDDbjCpI9jN2tFpws5XsuSHzTgjPK2YPpfneGZ3ni6Lq0SFG6PN8m3haLyHUNUXPfQmTiwIDAQAB",
     "description": "AI-driven research assistant — projects, sources, memory",
     "action": {
