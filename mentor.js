@@ -9,6 +9,7 @@ let t = AR_LOCALES.sv; // Default svenska
 let krypteringsNyckel = null;
 let tasks = [];
 let anteckningarSparade = "";
+let sessionKällor = []; // URLs samlade under denna session
 
 // ============================================================
 // KRYPTERING (samma som sidepanel.js)
@@ -314,6 +315,8 @@ async function starta() {
 async function öppnaProjekt(projekt) {
     sessionId = projekt.id;
     aktivtProjekt = projekt;
+    sessionKällor = [];
+    renderaKällor();
     nuvarandeSessionId = "session_" + Date.now();
 
     document.getElementById("projekt-namn-chatt").textContent = projekt.namn || projekt.fraga.slice(0, 40);
@@ -682,6 +685,46 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
     }, 2000);
 }
 
+function läggTillKälla(titel, url) {
+    if (!url || !url.startsWith("http")) return;
+    if (sessionKällor.some(k => k.url === url)) return; // deduplicera
+    sessionKällor.push({ titel: titel || url, url });
+    renderaKällor();
+}
+
+function renderaKällor() {
+    const lista = document.getElementById("käll-lista");
+    if (!lista) return;
+    if (!sessionKällor.length) {
+        lista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">Inga källor ännu.</div>`;
+        return;
+    }
+    lista.innerHTML = "";
+    sessionKällor.forEach(k => {
+        const div = document.createElement("div");
+        div.className = "käll-entry";
+        const titel = document.createElement("div");
+        titel.className = "käll-titel";
+        titel.textContent = k.titel;
+        const url = document.createElement("div");
+        url.className = "käll-url";
+        url.textContent = k.url;
+        url.title = k.url;
+        url.addEventListener("click", () => chrome.tabs.create({ url: k.url }));
+        div.append(titel, url);
+        lista.appendChild(div);
+    });
+}
+
+function extraheraKällorFrånText(text) {
+    // Markdown-länkar: [titel](url)
+    const mdReg = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+    let match;
+    while ((match = mdReg.exec(text)) !== null) {
+        läggTillKälla(match[1], match[2]);
+    }
+}
+
 async function hanteraAISvar(svar, tänker) {
     let assistantText = tolkSvar(svar);
     const searchMatch = assistantText.match(/\[SEARCH:\s*(.+?)\]/);
@@ -695,6 +738,8 @@ async function hanteraAISvar(svar, tänker) {
         if (renText) historik.push({ role: "assistant", content: renText, silent: true });
         const sokSvar = await chrome.runtime.sendMessage({ type: "SEARCH", query });
         if (sokSvar?.results?.length) {
+            // Logga sökresultaten som källor
+            sokSvar.results.forEach(r => läggTillKälla(r.title, r.url));
             const sokContent = `[Web search results for "${query}"]\n` +
                 sokSvar.results.map(r => `${r.title}\n${r.url}\n${r.snippet}`).join("\n\n");
             historik.push({ role: "user", content: sokContent, silent: true });
@@ -704,6 +749,8 @@ async function hanteraAISvar(svar, tänker) {
             assistantText = renText || assistantText;
         }
     }
+    // Extrahera markdown-länkar ur AI-svaret
+    extraheraKällorFrånText(assistantText);
     tänker.remove();
     return assistantText;
 }
