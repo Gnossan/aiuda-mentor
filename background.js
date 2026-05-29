@@ -3,6 +3,7 @@ console.log("AIuda Mentor background.js laddad");
 
 const BACKEND = "https://aiuda-mentor-backend.vercel.app";
 const FIREBASE_API_KEY = "AIzaSyCmClubetYGavOEVHBUHKQ-_sZZdt-LIWc";
+const READER_ID = "ojenopajocadlciophhkbgfnnklngjej";
 
 // --- Auth ---
 // TODO (K-1): När AIuda Reader publiceras med stabilt extension-ID, ersätt
@@ -241,8 +242,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 .then(async r => {
                     if (r.status === 404) { sendResponse({ ej_hittad: true }); return; }
                     const data = await r.json();
-                    sendResponse({ krypteradAnteckningar: data.krypteradAnteckningar, krypteradeKällor: data.krypteradeKällor });
+                    sendResponse({ krypteradAnteckningar: data.krypteradAnteckningar, krypteradeKällor: data.krypteradeKällor, krypteradLäslogg: data.krypteradLäslogg });
                 }).catch(e => sendResponse({ error: e.message }));
+        });
+        return true;
+    }
+
+    if (message.type === "GET_READER_ANNOTATION") {
+        chrome.runtime.sendMessage(READER_ID, { type: "GET_ANNOTATION" }, (svar) => {
+            sendResponse(svar || { error: "Inget svar från Reader" });
         });
         return true;
     }

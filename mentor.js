@@ -10,6 +10,7 @@ let krypteringsNyckel = null;
 let tasks = [];
 let anteckningarSparade = "";
 let sessionKällor = []; // URLs samlade under denna session
+let läslogg = [];       // Annoterade sidor per projekt
 
 // ============================================================
 // KRYPTERING (samma som sidepanel.js)
@@ -441,6 +442,8 @@ async function öppnaProjekt(projekt) {
     aktivtProjekt = projekt;
     sessionKällor = [];
     renderaKällor();
+    läslogg = [];
+    renderaLäslogg();
     nuvarandeSessionId = "session_" + Date.now();
 
     document.getElementById("projekt-namn-chatt").textContent = projekt.namn || projekt.fraga.slice(0, 40);
@@ -536,7 +539,13 @@ async function laddaAnteckningarOchTasks() {
                 sessionKällor = (dekKällor || []).map(k => ({ ...k, tid: new Date(k.tid) }));
                 renderaKällor();
             }
-            if (fjärr?.krypteradAnteckningar || fjärr?.krypteradeKällor) return;
+            // Ladda läslogg
+            if (fjärr?.krypteradLäslogg) {
+                const dekLäslogg = await dekryptera(fjärr.krypteradLäslogg);
+                läslogg = dekLäslogg || [];
+                renderaLäslogg();
+            }
+            if (fjärr?.krypteradAnteckningar || fjärr?.krypteradeKällor || fjärr?.krypteradLäslogg) return;
         } catch (e) { console.warn("Firebase-laddning misslyckades:", e.message); }
     }
 
@@ -951,6 +960,106 @@ document.getElementById("lägg-till-sida").addEventListener("click", async () =>
     const kontext = `[Användaren har lagt till en webbsida som källa]\nTitel: ${title}\nURL: ${url}\n\nReferera till denna sida när det är relevant i konversationen.`;
     historik.push({ role: "user", content: kontext, silent: true });
     await sparaHistorik();
+});
+
+// ============================================================
+// LÄSLOGG
+// ============================================================
+
+function renderaLäslogg() {
+    const lista = document.getElementById("läslogg-lista");
+    if (!lista) return;
+    if (!läslogg.length) {
+        lista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">Klicka 📖 för att lägga till annoterade sidor.</div>`;
+        return;
+    }
+    lista.innerHTML = "";
+    läslogg.forEach(e => {
+        const div = document.createElement("div");
+        div.className = "logg-entry";
+        const titel = document.createElement("div");
+        titel.style.cssText = "font-weight:600;font-size:11px;margin-bottom:3px;";
+        titel.textContent = e.title || e.url;
+        const url = document.createElement("div");
+        url.style.cssText = "font-size:10px;opacity:0.5;color:#f0c040;cursor:pointer;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+        url.textContent = e.url;
+        url.addEventListener("click", () => chrome.tabs.create({ url: e.url }));
+        const sammanfattning = document.createElement("div");
+        sammanfattning.style.cssText = "font-size:11px;opacity:0.7;line-height:1.5;margin-bottom:4px;";
+        sammanfattning.textContent = e.sammanfattning || "";
+        const tid = document.createElement("div");
+        tid.style.cssText = "font-size:10px;opacity:0.3;";
+        tid.textContent = e.tid ? new Date(e.tid).toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) + " " + new Date(e.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" }) : "";
+        div.append(titel, url, sammanfattning, tid);
+        lista.appendChild(div);
+    });
+}
+
+let läsloggTimeout;
+
+async function sparaLäslogg() {
+    if (!krypteringsNyckel || !sessionId || !läslogg.length) return;
+    try {
+        const krypteradLäslogg = await kryptera(läslogg);
+        chrome.runtime.sendMessage({
+            type: "SAVE_ANTECKNINGAR",
+            data: { projektId: sessionId, krypteradLäslogg }
+        });
+    } catch (e) { console.warn("Firebase-sync av läslogg misslyckades:", e.message); }
+}
+
+document.getElementById("lägg-till-läslogg").addEventListener("click", async () => {
+    if (!aktivtProjekt) return;
+    const knapp = document.getElementById("lägg-till-läslogg");
+    knapp.textContent = "⏳";
+    knapp.disabled = true;
+
+    const svar = await chrome.runtime.sendMessage({ type: "GET_READER_ANNOTATION" });
+
+    knapp.textContent = "📖";
+    knapp.disabled = false;
+
+    if (svar?.error || svar?.ej_annoterad) {
+        laggTillBubbla("assistant", svar?.ej_annoterad
+            ? "_Den aktiva sidan är inte annoterad med Reader ännu._"
+            : "_Kunde inte hämta annotation — är Reader installerad och aktiv?_");
+        return;
+    }
+
+    const { annotation, url, title } = svar;
+
+    // Undvik dubletter
+    if (läslogg.some(e => e.url === url)) {
+        laggTillBubbla("assistant", `_${title || url} finns redan i läsloggen._`);
+        return;
+    }
+
+    const entry = {
+        url,
+        title: title || url,
+        sammanfattning: annotation.sammanfattning || "",
+        kategorier: annotation.kategorier || [],
+        tid: new Date().toISOString()
+    };
+
+    läslogg.push(entry);
+    renderaLäslogg();
+    clearTimeout(läsloggTimeout);
+    läsloggTimeout = setTimeout(sparaLäslogg, 2000);
+
+    // Lägg till i källloggen
+    läggTillKälla(title, url);
+
+    // Tyst kontext till AI:n
+    const kontext = `[Reader-annotation tillagd]\nSida: ${title}\nURL: ${url}\nSammanfattning: ${annotation.sammanfattning}\nKategorier: ${(annotation.kategorier || []).map(k => k.namn).join(", ")}\n\nAnvänd denna annotation som bakgrundskunskap i konversationen.`;
+    historik.push({ role: "user", content: kontext, silent: true });
+    await sparaHistorik();
+
+    // Byt till läslogg-fliken
+    document.querySelectorAll(".flik").forEach(f => f.classList.remove("aktiv"));
+    document.querySelectorAll(".flik-vy").forEach(v => v.classList.remove("aktiv"));
+    document.querySelector("[data-flik='läslogg']").classList.add("aktiv");
+    document.getElementById("vy-läslogg").classList.add("aktiv");
 });
 
 window.addEventListener("paste", (e) => {

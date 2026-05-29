@@ -711,6 +711,7 @@
         <div id="skicka-knappar">
             <button id="avbryt-knapp" title="Avbryt" style="display:none;background:transparent;border:1px solid #888;color:#f5f0e8;border-radius:6px;cursor:pointer;font-size:12px;padding:5px 10px;opacity:0.7;">✕</button>
             <button id="lägg-till-sida" title="Lägg till aktiv sida som källa" style="background:transparent;border:1px solid #555;color:#f5f0e8;border-radius:6px;cursor:pointer;font-size:13px;padding:5px 10px;opacity:0.6;transition:opacity 0.15s;">📎</button>
+            <button id="lägg-till-läslogg" title="Lägg till Reader-annotering i läsloggen" style="background:transparent;border:1px solid #555;color:#f5f0e8;border-radius:6px;cursor:pointer;font-size:13px;padding:5px 10px;opacity:0.6;transition:opacity 0.15s;">📖</button>
             <button id="skicka-kort" title="Kort svar (Shift+Enter)">·→</button>
             <button id="skicka" title="Skicka (Enter)">→</button>
         </div>
@@ -725,6 +726,7 @@
         <div class="flik aktiv" data-flik="anteckningar">📝 Notat</div>
         <div class="flik" data-flik="tasks">✅ Tasks</div>
         <div class="flik" data-flik="källor">🔗 Källor</div>
+        <div class="flik" data-flik="läslogg">📖 Läst</div>
         <div class="flik" data-flik="logg">📋 Logg</div>
     </div>
 
@@ -747,6 +749,13 @@
     <div class="flik-vy" id="vy-källor">
         <div id="käll-lista">
             <div style="opacity:0.4;font-size:11px;padding:12px;">Inga källor ännu — läggs till automatiskt vid sökning eller via 📎</div>
+        </div>
+    </div>
+
+    <!-- Läslogg -->
+    <div class="flik-vy" id="vy-läslogg">
+        <div id="läslogg-lista">
+            <div style="opacity:0.4;font-size:11px;padding:12px;">Klicka 📖 för att lägga till annoterade sidor.</div>
         </div>
     </div>
 
