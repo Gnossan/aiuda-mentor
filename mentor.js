@@ -250,7 +250,18 @@ async function laddaProjektlista() {
         return;
     }
 
-    lista.innerHTML = DOMPurify.sanitize(svar.projekt.map(p => `
+    // Dekryptera metadata om nyckel finns
+    const projekt = await Promise.all(svar.projekt.map(async p => {
+        if (p.krypteradMetadata && krypteringsNyckel) {
+            try {
+                const meta = await dekryptera(p.krypteradMetadata);
+                if (meta) return { ...p, namn: meta.namn, fraga: meta.fraga };
+            } catch { /* fallback till klartext */ }
+        }
+        return p;
+    }));
+
+    lista.innerHTML = DOMPurify.sanitize(projekt.map(p => `
         <div class="projekt-item" data-id="${p.id}" data-namn="${encodeURIComponent(p.namn)}" data-fraga="${encodeURIComponent(p.fraga)}">
             <div class="projekt-item-namn">${p.namn || p.fraga.slice(0, 35)}</div>
             <div class="projekt-item-fraga">${p.fraga}</div>
@@ -598,7 +609,8 @@ async function sparaHistorik(synkaFirebase = false) {
     if (synkaFirebase && krypteringsNyckel) {
         try {
             const krypteradHistorik = await kryptera(historik);
-            chrome.runtime.sendMessage({ type: "SAVE_HISTORIK", data: { projektId: sessionId, namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, krypteradHistorik } });
+            const krypteradMetadata = await kryptera({ namn: aktivtProjekt?.namn || "", fraga: aktivtProjekt?.fraga || "" });
+            chrome.runtime.sendMessage({ type: "SAVE_HISTORIK", data: { projektId: sessionId, krypteradHistorik, krypteradMetadata } });
         } catch (e) { console.warn("Firebase-sync misslyckades:", e.message); }
     }
 }
