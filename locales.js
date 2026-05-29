@@ -25,10 +25,6 @@ const AR_LOCALES = {
         modellInfoFree:       "Annotation: Sonnet · Chat: Haiku",
         modellUppgradera:     "Upgrade to Pro or VIP to use more powerful models like Opus for both annotation and chat.",
 
-        modellInfoFree:       "Annotation: Sonnet · Chat: Haiku",
-        modellUppgradera:     "Upgrade to Pro or VIP to use more powerful models like Opus for both annotation and chat.",
-
-
         // --- Sidopanel ---
         header:               "AIuda Reader",
         exportera:            "↓ Export",
@@ -44,9 +40,6 @@ const AR_LOCALES = {
         köpKrediter:          "Buy credits",
         uppgraderaPro:        "Upgrade to Pro — €9.99/month",
         uppgraderaVip:        "Upgrade to VIP — €19.99/month",
-        consentText:          "AIuda Reader stores your login info and preferences locally, and your email and usage data on our servers. Text you annotate is sent to Anthropic's Claude API. The extension enables text selection within links to allow word lookup on all page types.",
-        consentLank:          "Privacy Policy",
-        consentKnapp:         "I agree",
         consentText:          "AIuda Reader stores your login info and preferences locally, and your email and usage data on our servers. Text you annotate is sent to Anthropic's Claude API. The extension enables text selection within links to allow word lookup on all page types.",
         consentLank:          "Privacy Policy",
         consentKnapp:         "I agree",
