@@ -259,6 +259,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === "DELETE_PROJEKT") {
+        hämtaToken().then(token => {
+            if (!token) { sendResponse({ error: "Ej inloggad" }); return; }
+            fetchMedToken(`${BACKEND}/api/projekt-historik?projektId=${encodeURIComponent(message.projektId)}`,
+                { method: "DELETE" }, token)
+                .then(async r => { const data = await r.json(); sendResponse(data); })
+                .catch(e => sendResponse({ error: e.message }));
+        });
+        return true;
+    }
+
     if (message.type === "TOOLBAR_SEARCH") {
         chrome.search.query({ text: message.query, disposition: "NEW_TAB" });
         sendResponse({});

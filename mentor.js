@@ -279,7 +279,76 @@ async function laddaProjektlista() {
                 fraga: decodeURIComponent(el.dataset.fraga)
             });
         });
+
+        el.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            visaProjektMeny(el, decodeURIComponent(el.dataset.namn), decodeURIComponent(el.dataset.fraga), el.dataset.id);
+        });
     });
+}
+
+function visaProjektMeny(el, namn, fraga, id) {
+    document.getElementById("projekt-meny")?.remove();
+
+    const meny = document.createElement("div");
+    meny.id = "projekt-meny";
+    meny.style.cssText = `position:fixed;background:#2a2218;border:1px solid #444;border-radius:6px;padding:4px 0;font-size:12px;z-index:9999;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,0.4);`;
+
+    const rect = el.getBoundingClientRect();
+    meny.style.left = rect.right + 4 + "px";
+    meny.style.top = rect.top + "px";
+
+    const döpOmKnapp = document.createElement("div");
+    döpOmKnapp.textContent = "✏ Döp om";
+    döpOmKnapp.style.cssText = "padding:8px 14px;cursor:pointer;color:#f5f0e8;";
+    döpOmKnapp.onmouseover = () => döpOmKnapp.style.background = "rgba(255,255,255,0.07)";
+    döpOmKnapp.onmouseout = () => döpOmKnapp.style.background = "";
+    döpOmKnapp.addEventListener("click", () => { meny.remove(); döpOmProjekt(id, namn, fraga); });
+
+    const raderaKnapp = document.createElement("div");
+    raderaKnapp.textContent = "🗑 Radera";
+    raderaKnapp.style.cssText = "padding:8px 14px;cursor:pointer;color:#ff6b6b;";
+    raderaKnapp.onmouseover = () => raderaKnapp.style.background = "rgba(255,255,255,0.07)";
+    raderaKnapp.onmouseout = () => raderaKnapp.style.background = "";
+    raderaKnapp.addEventListener("click", () => { meny.remove(); raderaProjekt(id, namn); });
+
+    meny.append(döpOmKnapp, raderaKnapp);
+    document.body.appendChild(meny);
+    setTimeout(() => document.addEventListener("click", () => meny.remove(), { once: true }), 0);
+}
+
+async function döpOmProjekt(id, gammaltNamn, fraga) {
+    const nyttNamn = prompt("Nytt namn:", gammaltNamn);
+    if (!nyttNamn || nyttNamn.trim() === gammaltNamn) return;
+    if (aktivtProjekt?.id === id) {
+        aktivtProjekt.namn = nyttNamn.trim();
+        document.getElementById("projekt-namn-chatt").textContent = nyttNamn.trim();
+        byggSystemprompt();
+    }
+    // Spara krypterat med nytt namn
+    if (krypteringsNyckel) {
+        const krypteradMetadata = await kryptera({ namn: nyttNamn.trim(), fraga });
+        chrome.runtime.sendMessage({ type: "SAVE_HISTORIK", data: { projektId: id, krypteradMetadata } });
+    }
+    await laddaProjektlista();
+}
+
+async function raderaProjekt(id, namn) {
+    if (!confirm(`Radera "${namn || id}"? Det går inte att ångra.`)) return;
+    const token = await new Promise(resolve => chrome.storage.local.get("arToken", ({ arToken }) => resolve(arToken)));
+    if (!token) return;
+    await chrome.runtime.sendMessage({ type: "DELETE_PROJEKT", projektId: id });
+    if (aktivtProjekt?.id === id) {
+        aktivtProjekt = null;
+        historik = [];
+        document.getElementById("meddelanden").innerHTML = "";
+        document.getElementById("meddelanden").style.display = "none";
+        document.getElementById("input-area").style.display = "none";
+        document.getElementById("spara-session").style.display = "none";
+        document.getElementById("info-knapp").style.display = "none";
+        document.getElementById("välkommen").style.display = "flex";
+    }
+    await laddaProjektlista();
 }
 
 // ============================================================
@@ -486,7 +555,7 @@ function läggTillTask() {
 function renderaTasks() {
     const lista = document.getElementById("task-lista");
     if (!tasks.length) {
-        lista.innerHTML = `<div style="padding:12px;font-size:11px;opacity:0.3;">Inga tasks ännu.</div>`;
+        lista.innerHTML = `<div style="padding:12px;font-size:11px;opacity:0.3;">Inga tasks ännu — skriv en uppföljning ovan och tryck ＋</div>`;
         return;
     }
 
@@ -542,7 +611,7 @@ async function laddaLogg() {
     });
 
     if (!svar?.entries?.length) {
-        loggLista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">Inga sparade sessioner ännu.</div>`;
+        loggLista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">Inga sparade sessioner ännu — klicka 💾 i chatt-headern för att spara.</div>`;
         return;
     }
 
@@ -799,6 +868,7 @@ function tolkSvar(svar) {
 
 document.getElementById("skicka").addEventListener("click", () => skicka());
 document.getElementById("skicka-kort").addEventListener("click", () => skicka(true));
+document.getElementById("avbryt-knapp").addEventListener("click", () => { avbrutit = true; });
 document.getElementById("input").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); }
     // Shift+Enter = ny rad (webbläsarens standardbeteende)
@@ -849,10 +919,16 @@ window.addEventListener("paste", (e) => {
     input.focus();
 });
 
+let pågårSvar = false;
+let avbrutit = false;
+
 async function skicka(kort = false) {
     const input = document.getElementById("input");
     const text = input.value.trim();
-    if (!text || !aktivtProjekt) return;
+    if (!text || !aktivtProjekt || pågårSvar) return;
+    pågårSvar = true;
+    avbrutit = false;
+    document.getElementById("avbryt-knapp").style.display = "inline-block";
     const nu = new Date().toISOString();
     laggTillBubbla("user", text, true, nu);
     historik.push({ role: "user", content: text, tid: nu });
@@ -863,6 +939,13 @@ async function skicka(kort = false) {
     await sparaHistorik();
     const tänker = visaTänker();
     const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik, model: valdModell });
+    document.getElementById("avbryt-knapp").style.display = "none";
+    pågårSvar = false;
+    if (avbrutit) {
+        avbrutit = false;
+        tänker.remove();
+        return;
+    }
     const assistantText = await hanteraAISvar(svar, tänker);
     const svarTid = new Date().toISOString();
     laggTillBubbla("assistant", assistantText, true, svarTid);
