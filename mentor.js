@@ -804,6 +804,36 @@ document.getElementById("input").addEventListener("keydown", (e) => {
     // Shift+Enter = ny rad (webbläsarens standardbeteende)
 });
 
+document.getElementById("lägg-till-sida").addEventListener("click", async () => {
+    if (!aktivtProjekt) return;
+    const knapp = document.getElementById("lägg-till-sida");
+    knapp.textContent = "⏳";
+    knapp.disabled = true;
+
+    const svar = await chrome.runtime.sendMessage({ type: "GET_ACTIVE_TAB" });
+
+    knapp.textContent = "📎";
+    knapp.disabled = false;
+
+    if (svar?.error || !svar?.url) {
+        laggTillBubbla("assistant", "_Ingen aktiv webbsida hittades._");
+        return;
+    }
+
+    const { url, title } = svar;
+
+    // Lägg till i källloggen
+    läggTillKälla(title, url);
+
+    // Synligt meddelande i chatten
+    laggTillBubbla("user", `📎 [${title}](${url})`);
+
+    // Tyst kontext till AI:n
+    const kontext = `[Användaren har lagt till en webbsida som källa]\nTitel: ${title}\nURL: ${url}\n\nReferera till denna sida när det är relevant i konversationen.`;
+    historik.push({ role: "user", content: kontext, silent: true });
+    await sparaHistorik();
+});
+
 window.addEventListener("paste", (e) => {
     const input = document.getElementById("input");
     const active = document.activeElement;

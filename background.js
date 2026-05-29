@@ -246,6 +246,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === "GET_ACTIVE_TAB") {
+        chrome.tabs.query({ active: true }, (tabs) => {
+            // Filtrera bort extension-sidor, välj senast aktiv webbsida
+            const webbTab = tabs.find(t => t.url && t.url.startsWith("http"));
+            if (webbTab) {
+                sendResponse({ url: webbTab.url, title: webbTab.title || webbTab.url });
+            } else {
+                sendResponse({ error: "Ingen aktiv webbsida hittad" });
+            }
+        });
+        return true;
+    }
+
     if (message.type === "TOOLBAR_SEARCH") {
         chrome.search.query({ text: message.query, disposition: "NEW_TAB" });
         sendResponse({});
