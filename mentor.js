@@ -180,8 +180,31 @@ async function visaLösenordsDialog(email) {
 // INIT
 // ============================================================
 
-chrome.storage.local.get(["lang", "tema", "arToken", "arUser"], async (result) => {
+let valdModell = "claude-sonnet-4-6";
+
+const MODELLER = [
+    { id: "claude-sonnet-4-6", label: "S", titel: "Sonnet (standard)" },
+    { id: "claude-haiku-4-5-20251001", label: "H", titel: "Haiku (snabb)" }
+];
+
+function uppdateraModellKnapp() {
+    const knapp = document.getElementById("modell-knapp");
+    const m = MODELLER.find(m => m.id === valdModell) || MODELLER[0];
+    knapp.textContent = m.label;
+    knapp.title = m.titel;
+}
+
+document.getElementById("modell-knapp").addEventListener("click", () => {
+    const index = MODELLER.findIndex(m => m.id === valdModell);
+    valdModell = MODELLER[(index + 1) % MODELLER.length].id;
+    chrome.storage.local.set({ mentorModell: valdModell });
+    uppdateraModellKnapp();
+});
+
+chrome.storage.local.get(["lang", "tema", "arToken", "arUser", "mentorModell"], async (result) => {
     t = AR_LOCALES[result.lang] || AR_LOCALES.sv;
+    if (result.mentorModell) valdModell = result.mentorModell;
+    uppdateraModellKnapp();
 
     if (!result.arToken) {
         document.getElementById("login-vy").style.display = "flex";
@@ -547,7 +570,7 @@ async function startaKonversation() {
     historik.push({ role: "user", content: fraga, silent: true });
     await sparaHistorik();
     const tänker = visaTänker();
-    const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik });
+    const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik, model: valdModell });
     const assistantText = await hanteraAISvar(svar, tänker);
     laggTillBubbla("assistant", assistantText);
     historik.push({ role: "assistant", content: assistantText });
@@ -668,7 +691,7 @@ async function hanteraAISvar(svar, tänker) {
             const sokContent = `[Web search results for "${query}"]\n` +
                 sokSvar.results.map(r => `${r.title}\n${r.url}\n${r.snippet}`).join("\n\n");
             historik.push({ role: "user", content: sokContent, silent: true });
-            const finalSvar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik });
+            const finalSvar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik, model: valdModell });
             assistantText = tolkSvar(finalSvar);
         } else {
             assistantText = renText || assistantText;
@@ -718,7 +741,7 @@ async function skicka(kort = false) {
     input.value = "";
     await sparaHistorik();
     const tänker = visaTänker();
-    const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik });
+    const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik, model: valdModell });
     const assistantText = await hanteraAISvar(svar, tänker);
     laggTillBubbla("assistant", assistantText);
     historik.push({ role: "assistant", content: assistantText });
