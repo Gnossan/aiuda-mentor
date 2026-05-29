@@ -1239,3 +1239,103 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
     document.getElementById("tema-knapp").textContent = ljust ? "🌙" : "☀";
     chrome.storage.local.set({ tema });
 });
+
+// ============================================================
+// ORDUPPSLAGNING (samma ?-knapp som i Reader)
+// ============================================================
+
+(function() {
+    let lookupKnapp = null;
+
+    document.getElementById("meddelanden").addEventListener("mouseup", (e) => {
+        if (e.target === lookupKnapp) return;
+        lookupKnapp?.remove();
+        lookupKnapp = null;
+
+        const urval = window.getSelection();
+        if (!urval || urval.isCollapsed) return;
+        const text = urval.toString().trim().replace(/\s+/g, " ");
+        if (!text || text.length > 300) return;
+
+        const range = urval.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        const knapp = document.createElement("button");
+        knapp.textContent = "?";
+        knapp.style.cssText = `
+            position:fixed;
+            left:${Math.min(rect.right + 6, window.innerWidth - 36)}px;
+            top:${rect.top - 4}px;
+            background:#1a1610;color:#f0c040;
+            border:1px solid #f0c040;border-radius:50%;
+            width:22px;height:22px;font-size:13px;font-weight:700;
+            cursor:pointer;z-index:9998;padding:0;line-height:1;
+            font-family:sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.4);
+        `;
+        document.body.appendChild(knapp);
+        lookupKnapp = knapp;
+
+        knapp.addEventListener("mousedown", async (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            knapp.remove();
+            lookupKnapp = null;
+
+            const x = Math.min(rect.right + 8, window.innerWidth - 280);
+            const y = rect.bottom + 8;
+
+            // Laddnings-popup
+            visaLookupLadd(x, y, text);
+
+            try {
+                const resp = await fetch("https://annotated-reader-backend.vercel.app/api/word-lookup-free", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ word: text, lang: "sv" })
+                });
+                const data = await resp.json();
+                if (data.definition) {
+                    visaLookupPopup(x, y, text, data.definition);
+                } else {
+                    document.getElementById("ar-lookup-popup")?.remove();
+                }
+            } catch {
+                document.getElementById("ar-lookup-popup")?.remove();
+            }
+        });
+    });
+
+    document.addEventListener("mousedown", (e) => {
+        if (e.target === lookupKnapp) return;
+        lookupKnapp?.remove();
+        lookupKnapp = null;
+    });
+
+    function visaLookupLadd(x, y, word) {
+        document.getElementById("ar-lookup-popup")?.remove();
+        const popup = document.createElement("div");
+        popup.id = "ar-lookup-popup";
+        popup.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:#1a1610;color:#f5f0e8;padding:12px 14px;border-radius:8px;font-family:'DM Mono',monospace;font-size:13px;max-width:260px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.5);line-height:1.5;border:1px solid #333;`;
+        popup.innerHTML = `<div style="font-weight:600;margin-bottom:8px;">${DOMPurify.sanitize(word)}</div><div><span class="ar-tänker-dot"></span><span class="ar-tänker-dot"></span><span class="ar-tänker-dot"></span></div>`;
+        document.body.appendChild(popup);
+    }
+
+    function visaLookupPopup(x, y, word, definition) {
+        document.getElementById("ar-lookup-popup")?.remove();
+        const popup = document.createElement("div");
+        popup.id = "ar-lookup-popup";
+        popup.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:#1a1610;color:#f5f0e8;padding:12px 14px;border-radius:8px;font-family:'DM Mono',monospace;font-size:13px;max-width:260px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.5);line-height:1.5;border:1px solid #333;`;
+        const stäng = document.createElement("button");
+        stäng.textContent = "×";
+        stäng.style.cssText = "position:absolute;top:6px;right:8px;background:transparent;border:none;color:#f5f0e8;opacity:0.4;cursor:pointer;font-size:16px;line-height:1;";
+        stäng.addEventListener("click", () => popup.remove());
+        const rubrik = document.createElement("div");
+        rubrik.style.cssText = "font-weight:600;margin-bottom:6px;padding-right:16px;color:#f0c040;";
+        rubrik.textContent = word;
+        const text = document.createElement("div");
+        text.textContent = definition;
+        popup.append(stäng, rubrik, text);
+        document.body.appendChild(popup);
+        setTimeout(() => { document.addEventListener("mousedown", () => popup.remove(), { once: true }); }, 100);
+    }
+})();
