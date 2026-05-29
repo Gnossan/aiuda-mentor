@@ -688,7 +688,7 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
 function läggTillKälla(titel, url) {
     if (!url || !url.startsWith("http")) return;
     if (sessionKällor.some(k => k.url === url)) return; // deduplicera
-    sessionKällor.push({ titel: titel || url, url });
+    sessionKällor.push({ titel: titel || url, url, tid: new Date() });
     renderaKällor();
 }
 
@@ -711,7 +711,11 @@ function renderaKällor() {
         url.textContent = k.url;
         url.title = k.url;
         url.addEventListener("click", () => chrome.tabs.create({ url: k.url }));
-        div.append(titel, url);
+        const tid = document.createElement("div");
+        tid.style.cssText = "font-size:10px;opacity:0.35;margin-top:2px;";
+        tid.textContent = k.tid.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })
+            + " · " + k.tid.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
+        div.append(titel, url, tid);
         lista.appendChild(div);
     });
 }
