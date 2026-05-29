@@ -913,7 +913,12 @@ function tolkSvar(svar) {
 document.getElementById("skicka").addEventListener("click", () => skicka());
 document.getElementById("skicka-kort").addEventListener("click", () => skicka(true));
 document.getElementById("avbryt-knapp").addEventListener("click", () => { avbrutit = true; });
-document.getElementById("input").addEventListener("keydown", (e) => {
+const inputEl = document.getElementById("input");
+inputEl.addEventListener("input", () => {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
+});
+inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); }
     // Shift+Enter = ny rad (webbläsarens standardbeteende)
 });
@@ -980,6 +985,7 @@ async function skicka(kort = false) {
         historik.push({ role: "user", content: "[Kort reflektion — svara måttligt, lägg inte ut till ett nytt ämne]", silent: true });
     }
     input.value = "";
+    input.style.height = "44px";
     await sparaHistorik();
     const tänker = visaTänker();
     const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik, model: valdModell });
