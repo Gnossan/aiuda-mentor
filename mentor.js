@@ -402,13 +402,18 @@ async function laddaAnteckningarOchTasks() {
                 anteckningarSparade = dekrypterad.anteckningar || "";
                 tasks = dekrypterad.tasks || [];
                 renderaTasks();
-                // Backfill lokalt cache
                 await chrome.storage.local.set({
                     [`anteckningar_${sessionId}`]: { anteckningar: dekrypterad.anteckningar || "", tasks: dekrypterad.tasks || [] }
                 });
-                return;
             }
-        } catch (e) { console.warn("Firebase-laddning av anteckningar misslyckades:", e.message); }
+            // Ladda källor separat
+            if (fjärr?.krypteradeKällor) {
+                const dekKällor = await dekryptera(fjärr.krypteradeKällor);
+                sessionKällor = (dekKällor || []).map(k => ({ ...k, tid: new Date(k.tid) }));
+                renderaKällor();
+            }
+            if (fjärr?.krypteradAnteckningar || fjärr?.krypteradeKällor) return;
+        } catch (e) { console.warn("Firebase-laddning misslyckades:", e.message); }
     }
 
     // Fallback: lokalt
@@ -685,11 +690,27 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
     }, 2000);
 }
 
+let källorTimeout;
+
 function läggTillKälla(titel, url) {
     if (!url || !url.startsWith("http")) return;
     if (sessionKällor.some(k => k.url === url)) return; // deduplicera
     sessionKällor.push({ titel: titel || url, url, tid: new Date() });
     renderaKällor();
+    // Spara till Firebase (debounced)
+    clearTimeout(källorTimeout);
+    källorTimeout = setTimeout(sparaKällor, 2000);
+}
+
+async function sparaKällor() {
+    if (!krypteringsNyckel || !sessionId || !sessionKällor.length) return;
+    try {
+        const krypteradeKällor = await kryptera(sessionKällor.map(k => ({ ...k, tid: k.tid.toISOString() })));
+        chrome.runtime.sendMessage({
+            type: "SAVE_ANTECKNINGAR",
+            data: { projektId: sessionId, krypteradeKällor }
+        });
+    } catch (e) { console.warn("Firebase-sync av källor misslyckades:", e.message); }
 }
 
 function renderaKällor() {
