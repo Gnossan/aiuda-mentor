@@ -636,30 +636,7 @@ document.getElementById("spara-anteckningar").addEventListener("click", async ()
 // Auto-spara anteckningar vid inmatning (debounced)
 let anteckningarTimeout;
 document.getElementById("anteckningar-area").addEventListener("keydown", (e) => {
-    // Enter = fortsätt lista automatiskt (Shift+Enter = vanlig nyrad som fallback)
-    if (e.key !== "Enter" || e.shiftKey) return;
-    const ta = e.target;
-    const pos = ta.selectionStart;
-    const text = ta.value;
-    const radStart = text.lastIndexOf("\n", pos - 1) + 1;
-    const radText = text.slice(radStart, pos);
-
-    const numMatch = radText.match(/^(\s*)(\d+)\.\s/);
-    const streckMatch = radText.match(/^(\s*)-\s/);
-
-    if (numMatch) {
-        e.preventDefault();
-        const indent = numMatch[1];
-        const nästaNum = parseInt(numMatch[2]) + 1;
-        ta.setRangeText(`\n${indent}${nästaNum}. `, pos, pos, "end");
-        sparaAnteckningarOchTasks();
-    } else if (streckMatch) {
-        e.preventDefault();
-        const indent = streckMatch[1];
-        ta.setRangeText(`\n${indent}- `, pos, pos, "end");
-        sparaAnteckningarOchTasks();
-    }
-    // Om inget matchar — Shift+Enter beter sig som vanlig Enter (nyrad)
+    // Anteckningsfältet: inga specialregler
 });
 
 document.getElementById("anteckningar-area").addEventListener("input", () => {
@@ -1007,8 +984,44 @@ inputEl.addEventListener("input", () => {
     inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
 });
 inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); }
-    // Shift+Enter = ny rad (webbläsarens standardbeteende)
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); return; }
+
+    // Shift+Enter: fortsätt lista om vi är i en, annars vanlig nyrad
+    if (e.key === "Enter" && e.shiftKey) {
+        const ta = inputEl;
+        const pos = ta.selectionStart;
+        const text = ta.value;
+        const radStart = text.lastIndexOf("\n", pos - 1) + 1;
+        const radText = text.slice(radStart, pos);
+
+        const numMatch = radText.match(/^(\s*)(\d+)\.\s(.*)$/);
+        const streckMatch = radText.match(/^(\s*)-\s(.*)$/);
+
+        if (numMatch) {
+            e.preventDefault();
+            const indent = numMatch[1];
+            const innehall = numMatch[3].trim();
+            if (!innehall) {
+                ta.setRangeText("\n", radStart, pos, "end");
+            } else {
+                ta.setRangeText(`\n${indent}${parseInt(numMatch[2]) + 1}. `, pos, pos, "end");
+            }
+            ta.style.height = "auto";
+            ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
+        } else if (streckMatch) {
+            e.preventDefault();
+            const indent = streckMatch[1];
+            const innehall = streckMatch[2].trim();
+            if (!innehall) {
+                ta.setRangeText("\n", radStart, pos, "end");
+            } else {
+                ta.setRangeText(`\n${indent}- `, pos, pos, "end");
+            }
+            ta.style.height = "auto";
+            ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
+        }
+        // Matchar inget — Shift+Enter = vanlig nyrad (webbläsarens standard)
+    }
 });
 
 document.getElementById("lägg-till-sida").addEventListener("click", async () => {
