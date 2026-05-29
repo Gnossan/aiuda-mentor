@@ -15,7 +15,8 @@ const TILLÅTNA_ORIGINS = [
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
     const frånWebbsida = !sender.id && TILLÅTNA_ORIGINS.includes(sender.origin);
-    const frånExtension = !!sender.id; // TODO: lägg till ID-check när Reader har stabilt ID
+    const READER_ID = "ojenopajocadlciophhkbgfnnklngjej";
+    const frånExtension = sender.id === READER_ID;
 
     // AUTH_COMPLETE får bara komma från kända webbsidor, aldrig från en annan extension
     if (message.type === "AUTH_COMPLETE") {

@@ -20,10 +20,10 @@ Dokumenterar medvetna avvägningar och designbeslut. Uppdateras löpande.
 
 ---
 
-### `externally_connectable.ids: ["*"]` (K-1)
-**Beslut:** Temporär lösning under beta.  
-**Motivering:** AIuda Reader saknar stabilt extension-ID (manuell install, inte Web Store). Avsändarvalidering finns i koden — `AUTH_COMPLETE` accepteras bara från kända webbsidor, `LÄGG_TILL_KÄLLA` bara från extensions.  
-**Åtgärd inför release:** Byt till Readers faktiska Web Store-ID. Se TODO-kommentar i background.js.
+### `externally_connectable.ids` (K-1)
+**Beslut:** Låst till Readers stabila ID `ojenopajocadlciophhkbgfnnklngjej`.  
+**Motivering:** RSA-nyckel tillagd i Readers manifest.json ger stabilt ID även utan Web Store-publicering.  
+**Status:** Stängd.
 
 ---
 

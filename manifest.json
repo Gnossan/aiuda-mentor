@@ -28,7 +28,7 @@
         "https://annotated-reader-backend.vercel.app/*"
     ],
     "externally_connectable": {
-        "ids": ["*"],
+        "ids": ["ojenopajocadlciophhkbgfnnklngjej"],
         "matches": [
             "https://aiuda-mentor-backend.vercel.app/*",
             "https://annotated-reader-backend.vercel.app/*"
