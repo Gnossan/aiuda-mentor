@@ -915,6 +915,10 @@ document.getElementById("kryptering-knapp").addEventListener("click", () => {
     chrome.storage.local.get("arUser", ({ arUser }) => visaLösenordsDialog(arUser?.email));
 });
 
+document.getElementById("hjälp-knapp").addEventListener("click", () => {
+    chrome.tabs.create({ url: "https://aiuda.se/help.html" });
+});
+
 // ⋯ info-popup
 document.getElementById("info-knapp").addEventListener("click", (e) => {
     e.stopPropagation();
