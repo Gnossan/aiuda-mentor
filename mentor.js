@@ -186,8 +186,9 @@ async function visaLösenordsDialog(email) {
 let valdModell = "claude-sonnet-4-6";
 
 const MODELLER = [
-    { id: "claude-sonnet-4-6", label: "S", titel: "Sonnet (standard)" },
-    { id: "claude-haiku-4-5-20251001", label: "H", titel: "Haiku (snabb)" }
+    { id: "claude-sonnet-4-6",          label: "S", titel: "Sonnet (standard)" },
+    { id: "claude-haiku-4-5-20251001",   label: "H", titel: "Haiku (snabb)" },
+    { id: "claude-opus-4-7",             label: "O", titel: "Opus (djupast — kan timeout:a)" }
 ];
 
 function uppdateraModellKnapp() {
@@ -195,14 +196,43 @@ function uppdateraModellKnapp() {
     const m = MODELLER.find(m => m.id === valdModell) || MODELLER[0];
     knapp.textContent = m.label;
     knapp.title = m.titel;
+    knapp.style.color = m.label === "O" ? "#ff9944" : "";
 }
 
 document.getElementById("modell-knapp").addEventListener("click", () => {
     const index = MODELLER.findIndex(m => m.id === valdModell);
-    valdModell = MODELLER[(index + 1) % MODELLER.length].id;
-    chrome.storage.local.set({ mentorModell: valdModell });
-    uppdateraModellKnapp();
+    const nästa = MODELLER[(index + 1) % MODELLER.length];
+
+    if (nästa.label === "O") {
+        visaOpusVarning(() => {
+            valdModell = nästa.id;
+            chrome.storage.local.set({ mentorModell: valdModell });
+            uppdateraModellKnapp();
+        });
+    } else {
+        valdModell = nästa.id;
+        chrome.storage.local.set({ mentorModell: valdModell });
+        uppdateraModellKnapp();
+    }
 });
+
+function visaOpusVarning(onOk) {
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;";
+    ov.innerHTML = `
+        <div style="background:#1a1610;border:1px solid #555;border-radius:10px;padding:24px;width:320px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.7;">
+            <div style="font-weight:600;margin-bottom:10px;color:#ff9944;">⚠ Opus — kraftfullare men långsammare</div>
+            <p style="opacity:0.8;margin-bottom:16px;">Opus ger djupare och mer nyanserade svar, men kan timeout:a vid långa konversationer (60s gräns på servern).</p>
+            <p style="opacity:0.6;font-size:11px;margin-bottom:16px;">Rekommenderas för kortare sessioner eller när samtalskvaliteten är viktigare än svarstiden.</p>
+            <div style="display:flex;gap:8px;">
+                <button id="opus-ok" style="flex:1;padding:9px;background:#ff9944;color:#1a1610;border:none;border-radius:5px;cursor:pointer;font-weight:600;font-family:inherit;">Använd Opus</button>
+                <button id="opus-avbryt" style="flex:1;padding:9px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:5px;cursor:pointer;font-family:inherit;">Avbryt</button>
+            </div>
+        </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector("#opus-ok").addEventListener("click", () => { ov.remove(); onOk(); });
+    ov.querySelector("#opus-avbryt").addEventListener("click", () => { ov.remove(); });
+}
 
 function uppdateraXPVisning() {
     const el = document.getElementById("xp-visning");
