@@ -371,7 +371,7 @@ async function öppnaProjekt(projekt) {
         historik.forEach(msg => {
             if (msg.silent) return;
             const text = typeof msg.content === "string" ? msg.content : msg.content[0]?.text || "";
-            laggTillBubbla(msg.role, text, false);
+            laggTillBubbla(msg.role, text, false, msg.tid || null);
         });
         document.getElementById("meddelanden").scrollTop = document.getElementById("meddelanden").scrollHeight;
     } else {
@@ -853,10 +853,10 @@ async function skicka(kort = false) {
     const input = document.getElementById("input");
     const text = input.value.trim();
     if (!text || !aktivtProjekt) return;
-    laggTillBubbla("user", text);
-    historik.push({ role: "user", content: text });
+    const nu = new Date().toISOString();
+    laggTillBubbla("user", text, true, nu);
+    historik.push({ role: "user", content: text, tid: nu });
     if (kort) {
-        // Engångsinstruktion — silent:true så den inte påverkar framtida svar
         historik.push({ role: "user", content: "[Kort reflektion — svara måttligt, lägg inte ut till ett nytt ämne]", silent: true });
     }
     input.value = "";
@@ -864,16 +864,33 @@ async function skicka(kort = false) {
     const tänker = visaTänker();
     const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt, historik, model: valdModell });
     const assistantText = await hanteraAISvar(svar, tänker);
-    laggTillBubbla("assistant", assistantText);
-    historik.push({ role: "assistant", content: assistantText });
+    const svarTid = new Date().toISOString();
+    laggTillBubbla("assistant", assistantText, true, svarTid);
+    historik.push({ role: "assistant", content: assistantText, tid: svarTid });
     await sparaHistorik(true);
 }
 
-function laggTillBubbla(roll, text, skrolla = true) {
+function formateraBubblaTid(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const idag = new Date();
+    const ärIdag = d.toDateString() === idag.toDateString();
+    if (ärIdag) return d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleDateString("sv-SE", { day: "numeric", month: "short" })
+        + " " + d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+}
+
+function laggTillBubbla(roll, text, skrolla = true, tid = null) {
     const div = document.createElement("div");
     div.className = `bubbla ${roll}`;
     if (roll === "assistant") div.innerHTML = DOMPurify.sanitize(marked.parse(text));
     else div.textContent = text;
+    if (tid) {
+        const tidEl = document.createElement("div");
+        tidEl.className = "bubbla-tid";
+        tidEl.textContent = formateraBubblaTid(tid);
+        div.appendChild(tidEl);
+    }
     const container = document.getElementById("meddelanden");
     container.appendChild(div);
     if (skrolla) {
