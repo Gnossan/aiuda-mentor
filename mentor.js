@@ -636,14 +636,14 @@ document.getElementById("spara-anteckningar").addEventListener("click", async ()
 // Auto-spara anteckningar vid inmatning (debounced)
 let anteckningarTimeout;
 document.getElementById("anteckningar-area").addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
+    // Shift+Enter = fortsätt lista automatiskt
+    if (e.key !== "Enter" || !e.shiftKey) return;
     const ta = e.target;
     const pos = ta.selectionStart;
     const text = ta.value;
     const radStart = text.lastIndexOf("\n", pos - 1) + 1;
     const radText = text.slice(radStart, pos);
 
-    // Matcha "1. ", "2. " etc. eller "- "
     const numMatch = radText.match(/^(\s*)(\d+)\.\s/);
     const streckMatch = radText.match(/^(\s*)-\s/);
 
@@ -651,16 +651,15 @@ document.getElementById("anteckningar-area").addEventListener("keydown", (e) => 
         e.preventDefault();
         const indent = numMatch[1];
         const nästaNum = parseInt(numMatch[2]) + 1;
-        const insättning = `\n${indent}${nästaNum}. `;
-        ta.setRangeText(insättning, pos, pos, "end");
+        ta.setRangeText(`\n${indent}${nästaNum}. `, pos, pos, "end");
         sparaAnteckningarOchTasks();
     } else if (streckMatch) {
         e.preventDefault();
         const indent = streckMatch[1];
-        const insättning = `\n${indent}- `;
-        ta.setRangeText(insättning, pos, pos, "end");
+        ta.setRangeText(`\n${indent}- `, pos, pos, "end");
         sparaAnteckningarOchTasks();
     }
+    // Om inget matchar — Shift+Enter beter sig som vanlig Enter (nyrad)
 });
 
 document.getElementById("anteckningar-area").addEventListener("input", () => {
