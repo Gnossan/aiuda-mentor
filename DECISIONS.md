@@ -52,6 +52,11 @@ Dokumenterar medvetna avvägningar och designbeslut. Uppdateras löpande.
 **Beslut:** Auto-sparning (debounce) sparar lokalt, explicit Spara-knapp synkar till Firebase.  
 **Motivering:** Undviker onödiga Firebase-skrivningar vid varje knapptryckning.
 
+### Projektnamn och frågeställning krypteras (krypteradMetadata)
+**Beslut:** Namn och fraga krypteras som `krypteradMetadata` på projektdokumentet. Klartext-fälten skrivs som tomma strängar vid krypterad sparning.  
+**Motivering:** Projektnamn och frågeställningar är känsliga forskningsdata — tidigare lagrades de i klartext, vilket var ett integritetsläckage.  
+**Bakåtkompatibilitet:** Äldre poster med klartext namn/fraga visas korrekt som fallback tills de sparas om med ny version.
+
 ---
 
 ## Arkitektur
