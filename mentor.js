@@ -990,6 +990,16 @@ function renderaLäslogg() {
         const tid = document.createElement("div");
         tid.style.cssText = "font-size:10px;opacity:0.3;";
         tid.textContent = e.tid ? new Date(e.tid).toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) + " " + new Date(e.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" }) : "";
+        const radera = document.createElement("button");
+        radera.textContent = "✕";
+        radera.style.cssText = "float:right;background:none;border:none;color:#f5f0e8;opacity:0.3;cursor:pointer;font-size:12px;padding:0;margin-left:6px;";
+        radera.addEventListener("click", () => {
+            läslogg = läslogg.filter(x => x.url !== e.url);
+            renderaLäslogg();
+            clearTimeout(läsloggTimeout);
+            läsloggTimeout = setTimeout(sparaLäslogg, 2000);
+        });
+        titel.prepend(radera);
         div.append(titel, url, sammanfattning, tid);
         lista.appendChild(div);
     });
