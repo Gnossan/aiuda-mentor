@@ -201,10 +201,17 @@ document.getElementById("modell-knapp").addEventListener("click", () => {
     uppdateraModellKnapp();
 });
 
+function tillampaTemat(tema) {
+    const ljust = tema === "ljust";
+    document.body.classList.toggle("ljust", ljust);
+    document.getElementById("tema-knapp").textContent = ljust ? "🌙" : "☀";
+}
+
 chrome.storage.local.get(["lang", "tema", "arToken", "arUser", "mentorModell"], async (result) => {
     t = AR_LOCALES[result.lang] || AR_LOCALES.sv;
     if (result.mentorModell) valdModell = result.mentorModell;
     uppdateraModellKnapp();
+    tillampaTemat(result.tema || "mörkt");
 
     if (!result.arToken) {
         document.getElementById("login-vy").style.display = "flex";
@@ -848,6 +855,8 @@ document.addEventListener("click", () => {
 });
 
 document.getElementById("tema-knapp").addEventListener("click", () => {
-    document.body.classList.toggle("ljust");
-    document.getElementById("tema-knapp").textContent = document.body.classList.contains("ljust") ? "🌙" : "☀";
+    const ljust = document.body.classList.toggle("ljust");
+    const tema = ljust ? "ljust" : "mörkt";
+    document.getElementById("tema-knapp").textContent = ljust ? "🌙" : "☀";
+    chrome.storage.local.set({ tema });
 });
