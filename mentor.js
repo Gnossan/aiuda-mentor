@@ -11,6 +11,7 @@ let tasks = [];
 let anteckningarSparade = "";
 let sessionKällor = []; // URLs samlade under denna session
 let läslogg = [];       // Annoterade sidor per projekt
+let totalXP = 0;
 
 // ============================================================
 // KRYPTERING (samma som sidepanel.js)
@@ -203,15 +204,34 @@ document.getElementById("modell-knapp").addEventListener("click", () => {
     uppdateraModellKnapp();
 });
 
+function uppdateraXPVisning() {
+    const el = document.getElementById("xp-visning");
+    if (el) el.textContent = `⚡${totalXP}`;
+}
+
+function läggTillXP(mängd) {
+    totalXP += mängd;
+    chrome.storage.local.set({ mentorXP: totalXP });
+    uppdateraXPVisning();
+    // Liten animation
+    const el = document.getElementById("xp-visning");
+    if (el) {
+        el.style.opacity = "1";
+        el.style.color = "#f0c040";
+        setTimeout(() => { el.style.opacity = "0.5"; }, 1500);
+    }
+}
+
 function tillampaTemat(tema) {
     const ljust = tema === "ljust";
     document.body.classList.toggle("ljust", ljust);
     document.getElementById("tema-knapp").textContent = ljust ? "🌙" : "☀";
 }
 
-chrome.storage.local.get(["lang", "tema", "arToken", "arUser", "mentorModell"], async (result) => {
+chrome.storage.local.get(["lang", "tema", "arToken", "arUser", "mentorModell", "mentorXP"], async (result) => {
     t = AR_LOCALES[result.lang] || AR_LOCALES.sv;
     if (result.mentorModell) valdModell = result.mentorModell;
+    if (result.mentorXP) { totalXP = result.mentorXP; uppdateraXPVisning(); }
     uppdateraModellKnapp();
     tillampaTemat(result.tema || "mörkt");
 
@@ -453,6 +473,7 @@ async function öppnaProjekt(projekt) {
     document.getElementById("meddelanden").style.display = "flex";
     document.getElementById("input-area").style.display = "flex";
     document.getElementById("spara-session").style.display = "inline-block";
+    document.getElementById("testa-mig-knapp").style.display = "inline-block";
     document.getElementById("info-knapp").style.display = "inline-block";
     document.getElementById("info-projekt-id").textContent = sessionId;
     document.getElementById("info-session-id").textContent = nuvarandeSessionId;
@@ -811,8 +832,8 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
     if (resultat?.id) {
         sparaKnapp.textContent = "✓";
         sparaKnapp.classList.add("aktiv");
-        // Uppdatera logg-fliken om den är öppen
         laddaLogg();
+        läggTillXP(10); // 💾 Spara session = 10 XP
     } else {
         sparaKnapp.textContent = "✗";
         console.error("Fel vid logg-sparande:", resultat?.error);
@@ -831,6 +852,7 @@ function läggTillKälla(titel, url) {
     if (sessionKällor.some(k => k.url === url)) return; // deduplicera
     sessionKällor.push({ titel: titel || url, url, tid: new Date() });
     renderaKällor();
+    läggTillXP(2); // 🔗 Ny källa = 2 XP
     // Spara till Firebase (debounced)
     clearTimeout(källorTimeout);
     källorTimeout = setTimeout(sparaKällor, 2000);
@@ -1094,6 +1116,16 @@ async function skicka(kort = false) {
     const input = document.getElementById("input");
     const text = input.value.trim();
     if (!text || !aktivtProjekt || pågårSvar) return;
+
+    // Om quiz är aktivt — skicka svaret till quiz-motorn
+    if (quizAktivt) {
+        laggTillBubbla("user", text, true, new Date().toISOString());
+        input.value = "";
+        input.style.height = "44px";
+        await hanteraQuizSvar(text);
+        return;
+    }
+
     pågårSvar = true;
     avbrutit = false;
     document.getElementById("avbryt-knapp").style.display = "inline-block";
@@ -1223,6 +1255,112 @@ chrome.storage.local.get(["mentorNavBredd", "mentorHögerBredd"], (result) => {
 // ============================================================
 // KRYPTERING-KNAPP & TEMA
 // ============================================================
+
+// ============================================================
+// LÄXFÖRHÖR
+// ============================================================
+
+let quizAktivt = false;
+let quizFragor = [];
+let quizIndex = 0;
+let quizPoäng = 0;
+let quizTotalt = 0;
+
+document.getElementById("testa-mig-knapp").addEventListener("click", async () => {
+    if (quizAktivt) return;
+    if (historik.filter(m => !m.silent).length < 4) {
+        laggTillBubbla("assistant", "_Chatten behöver lite mer innehåll innan jag kan testa dig. Fortsätt konversationen lite till._");
+        return;
+    }
+
+    const knapp = document.getElementById("testa-mig-knapp");
+    knapp.textContent = "⏳";
+    knapp.disabled = true;
+
+    const quizPrompt = `Based on our conversation, generate exactly 3 quiz questions to test the user's understanding. Return ONLY valid JSON, no other text:
+{
+  "questions": [
+    {"question": "...", "ideal_answer": "brief ideal answer for evaluation"}
+  ]
+}
+Questions should be open-ended, not yes/no. Language: same as the conversation.`;
+
+    const sessionHistorik = historik.slice(sessionStartIndex).filter(m => !m.silent);
+    const svar = await chrome.runtime.sendMessage({
+        type: "CHAT",
+        systemprompt,
+        historik: [...sessionHistorik, { role: "user", content: quizPrompt }],
+        model: valdModell
+    });
+
+    knapp.textContent = "🎓";
+    knapp.disabled = false;
+
+    const rawText = svar?.result?.content?.[0]?.text || "";
+    try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+        if (!parsed?.questions?.length) throw new Error("No questions");
+
+        quizFragor = parsed.questions;
+        quizIndex = 0;
+        quizPoäng = 0;
+        quizTotalt = quizFragor.length;
+        quizAktivt = true;
+
+        laggTillBubbla("assistant", `🎓 **Läxförhör — ${quizTotalt} frågor**\n\nSvara med egna ord. Inga poäng för ordagranna svar — det handlar om förståelse.\n\n**Fråga 1 av ${quizTotalt}:**\n\n${quizFragor[0].question}`);
+    } catch {
+        laggTillBubbla("assistant", "_Kunde inte generera frågor just nu. Försök igen._");
+    }
+});
+
+async function hanteraQuizSvar(text) {
+    const fråga = quizFragor[quizIndex];
+    const evalPrompt = `The user was asked: "${fråga.question}"
+Ideal answer: "${fråga.ideal_answer}"
+User answered: "${text}"
+
+Evaluate briefly (1-2 sentences) and give a score: "correct", "partial", or "incorrect".
+Return JSON: {"feedback": "...", "score": "correct|partial|incorrect"}`;
+
+    const tänker = visaTänker();
+    const svar = await chrome.runtime.sendMessage({
+        type: "CHAT",
+        systemprompt,
+        historik: [{ role: "user", content: evalPrompt }],
+        model: "claude-haiku-4-5-20251001" // Haiku för snabb utvärdering
+    });
+    tänker.remove();
+
+    const rawText = svar?.result?.content?.[0]?.text || "";
+    let feedback = "", score = "incorrect";
+    try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+        feedback = parsed?.feedback || rawText;
+        score = parsed?.score || "incorrect";
+    } catch {
+        feedback = rawText;
+    }
+
+    if (score === "correct") quizPoäng += 2;
+    else if (score === "partial") quizPoäng += 1;
+
+    const emoji = score === "correct" ? "✅" : score === "partial" ? "🟡" : "❌";
+    quizIndex++;
+
+    if (quizIndex < quizTotalt) {
+        laggTillBubbla("assistant", `${emoji} ${feedback}\n\n**Fråga ${quizIndex + 1} av ${quizTotalt}:**\n\n${quizFragor[quizIndex].question}`);
+    } else {
+        quizAktivt = false;
+        const maxPoäng = quizTotalt * 2;
+        const procent = Math.round((quizPoäng / maxPoäng) * 100);
+        laggTillBubbla("assistant", `${emoji} ${feedback}\n\n---\n\n🎓 **Klart! Resultat: ${quizPoäng}/${maxPoäng} poäng (${procent}%)**\n\n${procent >= 80 ? "Utmärkt! Du har greppat materialet väl." : procent >= 50 ? "Bra jobbat — lite mer att sätta sig in i." : "Fortsätt läsa och diskutera — kunskapen sätter sig med tid."}`);
+
+        // Ge XP
+        läggTillXP(quizPoäng * 5);
+    }
+}
 
 document.getElementById("kryptering-knapp").addEventListener("click", () => {
     chrome.storage.local.get("arUser", ({ arUser }) => visaLösenordsDialog(arUser?.email));
