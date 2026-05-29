@@ -636,8 +636,8 @@ document.getElementById("spara-anteckningar").addEventListener("click", async ()
 // Auto-spara anteckningar vid inmatning (debounced)
 let anteckningarTimeout;
 document.getElementById("anteckningar-area").addEventListener("keydown", (e) => {
-    // Shift+Enter = fortsätt lista automatiskt
-    if (e.key !== "Enter" || !e.shiftKey) return;
+    // Enter = fortsätt lista automatiskt (Shift+Enter = vanlig nyrad som fallback)
+    if (e.key !== "Enter" || e.shiftKey) return;
     const ta = e.target;
     const pos = ta.selectionStart;
     const text = ta.value;
