@@ -317,26 +317,70 @@ function visaProjektMeny(el, namn, fraga, id) {
     setTimeout(() => document.addEventListener("click", () => meny.remove(), { once: true }), 0);
 }
 
+function visaDialog(html) {
+    return new Promise(resolve => {
+        const overlay = document.createElement("div");
+        overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;";
+        overlay.innerHTML = `<div style="background:#1a1610;border:1px solid #444;border-radius:10px;padding:24px;width:320px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">${html}</div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.remove(); resolve(null); } });
+        overlay._resolve = (val) => { overlay.remove(); resolve(val); };
+    });
+}
+
 async function döpOmProjekt(id, gammaltNamn, fraga) {
-    const nyttNamn = prompt("Nytt namn:", gammaltNamn);
-    if (!nyttNamn || nyttNamn.trim() === gammaltNamn) return;
+    const overlay = await new Promise(resolve => {
+        const ov = document.createElement("div");
+        ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;";
+        ov.innerHTML = `
+            <div style="background:#1a1610;border:1px solid #444;border-radius:10px;padding:24px;width:320px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">
+                <div style="font-weight:600;margin-bottom:12px;color:#f0c040;">✏ Döp om projekt</div>
+                <input id="döp-om-input" type="text" value="${gammaltNamn}" style="width:100%;padding:8px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:12px;box-sizing:border-box;">
+                <div style="display:flex;gap:8px;">
+                    <button id="döp-om-ok" style="flex:1;padding:9px;background:#f0c040;color:#1a1610;border:none;border-radius:5px;cursor:pointer;font-weight:600;font-family:inherit;">Spara</button>
+                    <button id="döp-om-avbryt" style="flex:1;padding:9px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:5px;cursor:pointer;font-family:inherit;">Avbryt</button>
+                </div>
+            </div>`;
+        document.body.appendChild(ov);
+        const input = ov.querySelector("#döp-om-input");
+        input.focus(); input.select();
+        ov.querySelector("#döp-om-ok").addEventListener("click", () => { ov.remove(); resolve(input.value.trim()); });
+        ov.querySelector("#döp-om-avbryt").addEventListener("click", () => { ov.remove(); resolve(null); });
+        input.addEventListener("keydown", e => { if (e.key === "Enter") { ov.remove(); resolve(input.value.trim()); } });
+    });
+
+    if (!overlay || overlay === gammaltNamn) return;
     if (aktivtProjekt?.id === id) {
-        aktivtProjekt.namn = nyttNamn.trim();
-        document.getElementById("projekt-namn-chatt").textContent = nyttNamn.trim();
+        aktivtProjekt.namn = overlay;
+        document.getElementById("projekt-namn-chatt").textContent = overlay;
         byggSystemprompt();
     }
-    // Spara krypterat med nytt namn
     if (krypteringsNyckel) {
-        const krypteradMetadata = await kryptera({ namn: nyttNamn.trim(), fraga });
+        const krypteradMetadata = await kryptera({ namn: overlay, fraga });
         chrome.runtime.sendMessage({ type: "SAVE_HISTORIK", data: { projektId: id, krypteradMetadata } });
     }
     await laddaProjektlista();
 }
 
 async function raderaProjekt(id, namn) {
-    if (!confirm(`Radera "${namn || id}"? Det går inte att ångra.`)) return;
-    const token = await new Promise(resolve => chrome.storage.local.get("arToken", ({ arToken }) => resolve(arToken)));
-    if (!token) return;
+    const bekräftad = await new Promise(resolve => {
+        const ov = document.createElement("div");
+        ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;";
+        ov.innerHTML = `
+            <div style="background:#1a1610;border:1px solid #444;border-radius:10px;padding:24px;width:320px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">
+                <div style="font-weight:600;margin-bottom:8px;color:#ff6b6b;">🗑 Radera projekt</div>
+                <p style="opacity:0.8;margin-bottom:16px;">Radera <strong>${namn || id}</strong>?<br>Det går inte att ångra.</p>
+                <div style="display:flex;gap:8px;">
+                    <button id="radera-ok" style="flex:1;padding:9px;background:#ff6b6b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:600;font-family:inherit;">Radera</button>
+                    <button id="radera-avbryt" style="flex:1;padding:9px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:5px;cursor:pointer;font-family:inherit;">Avbryt</button>
+                </div>
+            </div>`;
+        document.body.appendChild(ov);
+        ov.querySelector("#radera-ok").addEventListener("click", () => { ov.remove(); resolve(true); });
+        ov.querySelector("#radera-avbryt").addEventListener("click", () => { ov.remove(); resolve(false); });
+    });
+
+    if (!bekräftad) return;
     await chrome.runtime.sendMessage({ type: "DELETE_PROJEKT", projektId: id });
     if (aktivtProjekt?.id === id) {
         aktivtProjekt = null;
