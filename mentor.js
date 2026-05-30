@@ -983,6 +983,16 @@ const inputEl = document.getElementById("input");
 inputEl.addEventListener("input", () => {
     inputEl.style.height = "auto";
     inputEl.style.height = Math.min(inputEl.scrollHeight, 200) + "px";
+
+    // Auto-tab när "1. " eller "- " skrivs i början av en rad
+    const pos = inputEl.selectionStart;
+    const text = inputEl.value;
+    const radStart = text.lastIndexOf("\n", pos - 1) + 1;
+    const radText = text.slice(radStart, pos);
+    if (/^(\d+\.\s|-\s)$/.test(radText)) {
+        inputEl.setRangeText("\t", radStart, radStart, "start");
+        inputEl.selectionStart = inputEl.selectionEnd = pos + 1;
+    }
 });
 inputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skicka(); return; }
@@ -1005,7 +1015,7 @@ inputEl.addEventListener("keydown", (e) => {
             if (!innehall) {
                 ta.setRangeText("\n", radStart, pos, "end");
             } else {
-                ta.setRangeText(`\n${indent}${parseInt(numMatch[2]) + 1}. `, pos, pos, "end");
+                ta.setRangeText(`\n\t${indent}${parseInt(numMatch[2]) + 1}. `, pos, pos, "end");
             }
             ta.style.height = "auto";
             ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
@@ -1016,7 +1026,7 @@ inputEl.addEventListener("keydown", (e) => {
             if (!innehall) {
                 ta.setRangeText("\n", radStart, pos, "end");
             } else {
-                ta.setRangeText(`\n${indent}- `, pos, pos, "end");
+                ta.setRangeText(`\n\t${indent}- `, pos, pos, "end");
             }
             ta.style.height = "auto";
             ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
