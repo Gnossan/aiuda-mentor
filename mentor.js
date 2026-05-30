@@ -116,13 +116,13 @@ async function visaLösenordsImportDialog(nyckelData, email) {
         dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;`;
         dialog.innerHTML = `
             <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:28px;width:340px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.7;">
-                <div style="color:#f0c040;font-weight:600;margin-bottom:10px;font-size:13px;">🔐 Välkommen tillbaka</div>
-                <p style="opacity:0.85;margin-bottom:6px;">Av sekretesskäl är dina projekt krypterade.</p>
-                <p style="opacity:0.6;font-size:11px;margin-bottom:16px;">Ange ditt lösenord för att låsa upp dem.</p>
-                <input id="import-lösenord" type="password" placeholder="Ditt lösenord" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
-                <div id="import-fel" style="color:#ff6b6b;font-size:11px;margin-bottom:8px;display:none;"></div>
-                <button id="import-ok" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Hämta mina anteckningar →</button>
-                <button id="import-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.5;font-size:11px;">Börja om på den här datorn</button>
+                <div style="color:#f0c040;font-weight:600;margin-bottom:10px;font-size:13px;">🔐 ${t.mentorLåsUppTitel || "Välkommen tillbaka"}</div>
+                <p style="opacity:0.85;margin-bottom:6px;">${t.mentorLåsUppText1 || "Av sekretesskäl är dina projekt krypterade."}</p>
+                <p style="opacity:0.6;font-size:11px;margin-bottom:16px;">${t.mentorLåsUppText2 || "Ange ditt lösenord för att låsa upp dem."}</p>
+                <input id="import-lösenord" type="password" placeholder="${t.mentorStällFraga || "Ditt lösenord"}" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
+                <div id="import-fel" style="color:#ff6b6b;font-size:11px;margin-bottom:8px;display:none;">${t.mentorLåsUppFel || "Fel lösenord — försök igen"}</div>
+                <button id="import-ok" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">${t.mentorLåsUppKnapp || "Hämta mina anteckningar →"}</button>
+                <button id="import-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.5;font-size:11px;">${t.mentorLåsUppBörjaOm || "Börja om på den här datorn"}</button>
             </div>`;
         document.body.appendChild(dialog);
         setTimeout(() => document.getElementById("import-lösenord")?.focus(), 50);
@@ -154,14 +154,14 @@ async function visaLösenordsDialog(email) {
         dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;`;
         dialog.innerHTML = `
             <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:28px;width:340px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.7;">
-                <div style="color:#f0c040;font-weight:600;margin-bottom:10px;font-size:13px;">🔑 Skydda dina anteckningar</div>
-                <p style="opacity:0.85;margin-bottom:6px;">Välj ett lösenord så att dina research-anteckningar är skyddade och tillgängliga på alla dina datorer.</p>
-                <p style="opacity:0.5;font-size:11px;margin-bottom:16px;">Utan lösenord är anteckningarna låsta till den här datorn. Om du byter dator eller reinstallerar webbläsaren försvinner de.</p>
+                <div style="color:#f0c040;font-weight:600;margin-bottom:10px;font-size:13px;">🔑 ${t.mentorSkyddaTitel || "Skydda dina anteckningar"}</div>
+                <p style="opacity:0.85;margin-bottom:6px;">${t.mentorSkyddaText1 || "Välj ett lösenord för att skydda dina anteckningar."}</p>
+                <p style="opacity:0.5;font-size:11px;margin-bottom:16px;">${t.mentorSkyddaText2 || "Utan lösenord är anteckningarna låsta till den här datorn."}</p>
                 <input id="ny-lösenord" type="password" placeholder="Välj ett lösenord (minst 8 tecken)" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
                 <input id="ny-lösenord-2" type="password" placeholder="Skriv lösenordet igen" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
                 <div id="lösenord-fel" style="color:#ff6b6b;font-size:11px;margin-bottom:8px;display:none;"></div>
-                <button id="lösenord-spara" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Skydda mina anteckningar →</button>
-                <button id="lösenord-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.5;font-size:11px;">Bara den här datorn — inget lösenord</button>
+                <button id="lösenord-spara" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">${t.mentorSkyddaKnapp || "Skydda mina anteckningar →"}</button>
+                <button id="lösenord-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.5;font-size:11px;">${t.mentorSkyddaHoppa || "Bara den här datorn — inget lösenord"}</button>
             </div>`;
         document.body.appendChild(dialog);
         setTimeout(() => document.getElementById("ny-lösenord")?.focus(), 50);
@@ -283,7 +283,6 @@ document.getElementById("sprak-knapp").addEventListener("click", () => {
     const nuvarandeLang = Object.keys(AR_LOCALES).find(k => AR_LOCALES[k] === t) || "sv";
     const index = SPRAK_ORDNING.indexOf(nuvarandeLang);
     const nästaLang = SPRAK_ORDNING[(index + 1) % SPRAK_ORDNING.length];
-    console.log("Språkbyte:", nuvarandeLang, "→", nästaLang, "mentorNotat:", AR_LOCALES[nästaLang]?.mentorNotat);
     chrome.storage.local.set({ lang: nästaLang });
     tillampaSprak(AR_LOCALES[nästaLang] || AR_LOCALES.sv);
     document.getElementById("sprak-knapp").title = nästaLang;
@@ -301,13 +300,14 @@ chrome.storage.local.get(["lang", "tema", "arToken", "arUser", "mentorModell", "
     if (result.mentorXP) { totalXP = result.mentorXP; uppdateraXPVisning(); }
     uppdateraModellKnapp();
     tillampaTemat(result.tema || "mörkt");
-    tillampaSprak(valtSprak);
-
     if (!result.arToken) {
         document.getElementById("login-vy").style.display = "flex";
         document.getElementById("välkommen").style.display = "none";
+        tillampaSprak(valtSprak);
         return;
     }
+
+    tillampaSprak(valtSprak);
 
     const email = result.arUser?.email || null;
     await laddaEllerSkapaNyckel(email);
