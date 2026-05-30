@@ -125,6 +125,7 @@ async function visaLösenordsImportDialog(nyckelData, email) {
                 <button id="import-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.5;font-size:11px;">Börja om på den här datorn</button>
             </div>`;
         document.body.appendChild(dialog);
+        setTimeout(() => document.getElementById("import-lösenord")?.focus(), 50);
         document.getElementById("import-ok").addEventListener("click", async () => {
             const lösenord = document.getElementById("import-lösenord").value;
             if (!lösenord) return;
@@ -163,6 +164,7 @@ async function visaLösenordsDialog(email) {
                 <button id="lösenord-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.5;font-size:11px;">Bara den här datorn — inget lösenord</button>
             </div>`;
         document.body.appendChild(dialog);
+        setTimeout(() => document.getElementById("ny-lösenord")?.focus(), 50);
         document.getElementById("lösenord-spara").addEventListener("click", async () => {
             const lösenord = document.getElementById("ny-lösenord").value;
             const lösenord2 = document.getElementById("ny-lösenord-2").value;
