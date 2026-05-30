@@ -283,6 +283,7 @@ document.getElementById("sprak-knapp").addEventListener("click", () => {
     const nuvarandeLang = Object.keys(AR_LOCALES).find(k => AR_LOCALES[k] === t) || "sv";
     const index = SPRAK_ORDNING.indexOf(nuvarandeLang);
     const nästaLang = SPRAK_ORDNING[(index + 1) % SPRAK_ORDNING.length];
+    console.log("Språkbyte:", nuvarandeLang, "→", nästaLang, "mentorNotat:", AR_LOCALES[nästaLang]?.mentorNotat);
     chrome.storage.local.set({ lang: nästaLang });
     tillampaSprak(AR_LOCALES[nästaLang] || AR_LOCALES.sv);
     document.getElementById("sprak-knapp").title = nästaLang;
