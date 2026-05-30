@@ -117,8 +117,8 @@ async function visaLösenordsImportDialog(nyckelData, email) {
         dialog.innerHTML = `
             <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:28px;width:340px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.7;">
                 <div style="color:#f0c040;font-weight:600;margin-bottom:10px;font-size:13px;">🔐 Välkommen tillbaka</div>
-                <p style="opacity:0.85;margin-bottom:6px;">Du har sparat research på en annan enhet.</p>
-                <p style="opacity:0.6;font-size:11px;margin-bottom:16px;">Ange det lösenord du valde när du skyddade dina anteckningar — då hämtas allt hit automatiskt.</p>
+                <p style="opacity:0.85;margin-bottom:6px;">Av sekretesskäl är dina projekt krypterade.</p>
+                <p style="opacity:0.6;font-size:11px;margin-bottom:16px;">Ange ditt lösenord för att låsa upp dem.</p>
                 <input id="import-lösenord" type="password" placeholder="Ditt lösenord" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
                 <div id="import-fel" style="color:#ff6b6b;font-size:11px;margin-bottom:8px;display:none;"></div>
                 <button id="import-ok" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Hämta mina anteckningar →</button>
