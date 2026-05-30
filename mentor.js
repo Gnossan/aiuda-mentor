@@ -1015,7 +1015,7 @@ inputEl.addEventListener("keydown", (e) => {
             if (!innehall) {
                 ta.setRangeText("\n", radStart, pos, "end");
             } else {
-                ta.setRangeText(`\n\t${indent}${parseInt(numMatch[2]) + 1}. `, pos, pos, "end");
+                ta.setRangeText(`\n${indent}${parseInt(numMatch[2]) + 1}. `, pos, pos, "end");
             }
             ta.style.height = "auto";
             ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
@@ -1026,7 +1026,7 @@ inputEl.addEventListener("keydown", (e) => {
             if (!innehall) {
                 ta.setRangeText("\n", radStart, pos, "end");
             } else {
-                ta.setRangeText(`\n\t${indent}- `, pos, pos, "end");
+                ta.setRangeText(`\n${indent}- `, pos, pos, "end");
             }
             ta.style.height = "auto";
             ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
