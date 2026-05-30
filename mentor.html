@@ -671,6 +671,7 @@
             <span id="xp-visning" title="Din totala XP" style="font-size:10px;opacity:0.5;color:#f0c040;letter-spacing:0.05em;cursor:default;">⚡0</span>
             <button id="kryptering-knapp" title="Krypteringsinställningar">🔑</button>
             <button id="modell-knapp" title="Byt modell">S</button>
+            <button id="sprak-knapp" title="Byt språk">🌐</button>
             <button id="tema-knapp" title="Byt tema">☀</button>
             <button id="hjälp-knapp" title="Help">?</button>
         </div>
@@ -699,17 +700,17 @@
 
     <div id="login-vy">
         <div style="font-size:14px;font-weight:600;color:#f0c040;">AIuda Mentor</div>
-        <div style="font-size:12px;opacity:0.7;line-height:1.6;">Logga in för att använda din research-assistent.</div>
+        <div id="login-text" style="font-size:12px;opacity:0.7;line-height:1.6;">Logga in för att använda din research-assistent.</div>
         <button id="login-knapp" style="padding:10px 20px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit;">Logga in</button>
     </div>
 
     <div id="välkommen">
-        <div class="rubrik">Välkommen till AIuda Mentor<sup style="font-size:8px;opacity:0.5;vertical-align:super;">™</sup></div>
-        <div class="beskrivning">Välj ett projekt till vänster<br>eller skapa ett nytt.</div>
+        <div class="rubrik" id="välkommen-rubrik">Välkommen till AIuda Mentor<sup style="font-size:8px;opacity:0.5;vertical-align:super;">™</sup></div>
+        <div class="beskrivning" id="välkommen-beskrivning">Välj ett projekt till vänster<br>eller skapa ett nytt.</div>
     </div>
 
     <div id="ny-fraga-panel">
-        <div class="rubrik">Nytt projekt</div>
+        <div class="rubrik" id="nytt-projekt-rubrik">Nytt projekt</div>
         <input id="projekt-namn-input" type="text" placeholder="Projektnamn">
         <textarea id="fraga-input" placeholder="Din frågeställning…"></textarea>
         <button id="starta-knapp">Starta →</button>
@@ -734,11 +735,11 @@
 <!-- HÖGER: Anteckningar, Tasks, Logg -->
 <div id="höger">
     <div id="höger-flikar">
-        <div class="flik aktiv" data-flik="anteckningar">📝 Notat</div>
-        <div class="flik" data-flik="tasks">✅ Tasks</div>
-        <div class="flik" data-flik="källor">🔗 Källor</div>
-        <div class="flik" data-flik="läslogg">📖 Läst</div>
-        <div class="flik" data-flik="logg">📋 Logg</div>
+        <div class="flik aktiv" data-flik="anteckningar" id="flik-notat">📝 Notat</div>
+        <div class="flik" data-flik="tasks" id="flik-tasks">✅ Tasks</div>
+        <div class="flik" data-flik="källor" id="flik-källor">🔗 Källor</div>
+        <div class="flik" data-flik="läslogg" id="flik-läst">📖 Läst</div>
+        <div class="flik" data-flik="logg" id="flik-logg">📋 Logg</div>
     </div>
 
     <!-- Anteckningar -->

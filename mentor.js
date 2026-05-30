@@ -255,6 +255,39 @@ function läggTillXP(mängd) {
     }
 }
 
+const SPRAK_ORDNING = ["sv", "en", "en-GB", "de", "fr", "es", "it", "no", "da"];
+
+function tillampaSprak(nyT) {
+    t = nyT;
+    // Uppdatera alla lokaliserade element
+    const el = (id) => document.getElementById(id);
+    if (el("login-text"))           el("login-text").textContent       = t.mentorLoggaIn || "";
+    if (el("login-knapp"))          el("login-knapp").textContent      = t.mentorLoggaInKnapp || "Logga in";
+    if (el("välkommen-rubrik"))     el("välkommen-rubrik").innerHTML   = (t.mentorVälkommen || "Välkommen till AIuda Mentor™") + '<sup style="font-size:8px;opacity:0.5;vertical-align:super;">™</sup>';
+    if (el("välkommen-beskrivning"))el("välkommen-beskrivning").innerHTML = (t.mentorVäljProjekt || "").replace("\n","<br>");
+    if (el("nytt-projekt-rubrik"))  el("nytt-projekt-rubrik").textContent  = t.mentorNyttProjekt || "Nytt projekt";
+    if (el("projekt-namn-input"))   el("projekt-namn-input").placeholder   = t.mentorProjektnamn || "Projektnamn";
+    if (el("fraga-input"))          el("fraga-input").placeholder          = t.mentorFrageställning || "Din frågeställning…";
+    if (el("starta-knapp"))         el("starta-knapp").textContent         = t.mentorStarta || "Starta →";
+    if (el("input"))                el("input").placeholder                = t.mentorStällFraga || "Ställ en fråga…";
+    if (el("flik-notat"))           el("flik-notat").textContent           = t.mentorNotat || "📝 Notat";
+    if (el("flik-tasks"))           el("flik-tasks").textContent           = t.mentorTasks || "✅ Tasks";
+    if (el("flik-källor"))          el("flik-källor").textContent          = t.mentorKällor || "🔗 Källor";
+    if (el("flik-läst"))            el("flik-läst").textContent            = t.mentorLäst || "📖 Läst";
+    if (el("flik-logg"))            el("flik-logg").textContent            = t.mentorLogg || "📋 Logg";
+    if (el("spara-anteckningar"))   el("spara-anteckningar").textContent   = t.mentorSpara || "Spara";
+    if (el("nytt-projekt-knapp"))   el("nytt-projekt-knapp").textContent   = "＋ " + (t.mentorNyttProjekt || "Nytt projekt");
+}
+
+document.getElementById("sprak-knapp").addEventListener("click", () => {
+    const nuvarandeLang = Object.keys(AR_LOCALES).find(k => AR_LOCALES[k] === t) || "sv";
+    const index = SPRAK_ORDNING.indexOf(nuvarandeLang);
+    const nästaLang = SPRAK_ORDNING[(index + 1) % SPRAK_ORDNING.length];
+    chrome.storage.local.set({ lang: nästaLang });
+    tillampaSprak(AR_LOCALES[nästaLang] || AR_LOCALES.sv);
+    document.getElementById("sprak-knapp").title = nästaLang;
+});
+
 function tillampaTemat(tema) {
     const ljust = tema === "ljust";
     document.body.classList.toggle("ljust", ljust);
@@ -262,11 +295,12 @@ function tillampaTemat(tema) {
 }
 
 chrome.storage.local.get(["lang", "tema", "arToken", "arUser", "mentorModell", "mentorXP"], async (result) => {
-    t = AR_LOCALES[result.lang] || AR_LOCALES.sv;
+    const valtSprak = AR_LOCALES[result.lang] || AR_LOCALES.sv;
     if (result.mentorModell) valdModell = result.mentorModell;
     if (result.mentorXP) { totalXP = result.mentorXP; uppdateraXPVisning(); }
     uppdateraModellKnapp();
     tillampaTemat(result.tema || "mörkt");
+    tillampaSprak(valtSprak);
 
     if (!result.arToken) {
         document.getElementById("login-vy").style.display = "flex";
@@ -666,7 +700,7 @@ function läggTillTask() {
 function renderaTasks() {
     const lista = document.getElementById("task-lista");
     if (!tasks.length) {
-        lista.innerHTML = `<div style="padding:12px;font-size:11px;opacity:0.3;">Inga tasks ännu — skriv en uppföljning ovan och tryck ＋</div>`;
+        lista.innerHTML = `<div style="padding:12px;font-size:11px;opacity:0.3;">${t.mentorIngaTasks || "Inga tasks ännu"}</div>`;
         return;
     }
 
@@ -722,7 +756,7 @@ async function laddaLogg() {
     });
 
     if (!svar?.entries?.length) {
-        loggLista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">Inga sparade sessioner ännu — klicka 💾 i chatt-headern för att spara.</div>`;
+        loggLista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">${t.mentorIngaLogg || "Inga sparade sessioner ännu"}</div>`;
         return;
     }
 
@@ -910,7 +944,7 @@ function renderaKällor() {
     const lista = document.getElementById("käll-lista");
     if (!lista) return;
     if (!sessionKällor.length) {
-        lista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">Inga källor ännu.</div>`;
+        lista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">${t.mentorIngaKällor || "Inga källor ännu"}</div>`;
         return;
     }
     lista.innerHTML = "";
