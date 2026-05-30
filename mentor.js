@@ -107,8 +107,7 @@ async function importeraNyckelMedLösenord(lösenord, nyckelData) {
 }
 
 function visaKrypteringsOnboarding() {
-    // Visa enkelt meddelande i chattområdet
-    laggTillBubbla("assistant", "🔐 Dina anteckningar krypteras lokalt. Klicka 🔑 för att sätta ett återställningslösenord.");
+    laggTillBubbla("assistant", "🔐 Dina anteckningar krypteras automatiskt på din enhet — AIuda kan inte läsa dem.\n\nKlicka **🔑** i verktygsfältet om du vill skydda dem med ett lösenord och komma åt dem från fler datorer.");
 }
 
 async function visaLösenordsImportDialog(nyckelData, email) {
@@ -116,13 +115,14 @@ async function visaLösenordsImportDialog(nyckelData, email) {
         const dialog = document.createElement("div");
         dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;`;
         dialog.innerHTML = `
-            <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:28px;width:340px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">
-                <div style="color:#f0c040;font-weight:600;margin-bottom:12px;">🔐 Hämta dina anteckningar</div>
-                <p style="opacity:0.8;margin-bottom:16px;">Du har anteckningar på en annan enhet. Ange ditt återställningslösenord.</p>
-                <input id="import-lösenord" type="password" placeholder="Återställningslösenord" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
+            <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:28px;width:340px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.7;">
+                <div style="color:#f0c040;font-weight:600;margin-bottom:10px;font-size:13px;">🔐 Välkommen tillbaka</div>
+                <p style="opacity:0.85;margin-bottom:6px;">Du har sparat research på en annan enhet.</p>
+                <p style="opacity:0.6;font-size:11px;margin-bottom:16px;">Ange det lösenord du valde när du skyddade dina anteckningar — då hämtas allt hit automatiskt.</p>
+                <input id="import-lösenord" type="password" placeholder="Ditt lösenord" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
                 <div id="import-fel" style="color:#ff6b6b;font-size:11px;margin-bottom:8px;display:none;"></div>
-                <button id="import-ok" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Lås upp →</button>
-                <button id="import-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.6;font-size:11px;">Börja med ny nyckel</button>
+                <button id="import-ok" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Hämta mina anteckningar →</button>
+                <button id="import-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.5;font-size:11px;">Börja om på den här datorn</button>
             </div>`;
         document.body.appendChild(dialog);
         document.getElementById("import-ok").addEventListener("click", async () => {
@@ -152,14 +152,15 @@ async function visaLösenordsDialog(email) {
         const dialog = document.createElement("div");
         dialog.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;`;
         dialog.innerHTML = `
-            <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:28px;width:340px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.6;">
-                <div style="color:#f0c040;font-weight:600;margin-bottom:12px;">🔑 Återställningslösenord</div>
-                <p style="opacity:0.8;margin-bottom:16px;">Sätt ett lösenord för att komma åt dina anteckningar från andra enheter.</p>
-                <input id="ny-lösenord" type="password" placeholder="Välj ett lösenord (min 8 tecken)" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
-                <input id="ny-lösenord-2" type="password" placeholder="Bekräfta lösenordet" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
+            <div style="background:#1a1610;border:1px solid #333;border-radius:10px;padding:28px;width:340px;font-family:'DM Mono',monospace;font-size:12px;color:#f5f0e8;line-height:1.7;">
+                <div style="color:#f0c040;font-weight:600;margin-bottom:10px;font-size:13px;">🔑 Skydda dina anteckningar</div>
+                <p style="opacity:0.85;margin-bottom:6px;">Välj ett lösenord så att dina research-anteckningar är skyddade och tillgängliga på alla dina datorer.</p>
+                <p style="opacity:0.5;font-size:11px;margin-bottom:16px;">Utan lösenord är anteckningarna låsta till den här datorn. Om du byter dator eller reinstallerar webbläsaren försvinner de.</p>
+                <input id="ny-lösenord" type="password" placeholder="Välj ett lösenord (minst 8 tecken)" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
+                <input id="ny-lösenord-2" type="password" placeholder="Skriv lösenordet igen" style="width:100%;padding:9px;background:#2a2218;border:1px solid #444;border-radius:5px;color:#f5f0e8;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;">
                 <div id="lösenord-fel" style="color:#ff6b6b;font-size:11px;margin-bottom:8px;display:none;"></div>
-                <button id="lösenord-spara" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Spara →</button>
-                <button id="lösenord-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.6;font-size:11px;">Hoppa över</button>
+                <button id="lösenord-spara" style="width:100%;padding:10px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-family:inherit;margin-bottom:8px;">Skydda mina anteckningar →</button>
+                <button id="lösenord-skip" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:inherit;opacity:0.5;font-size:11px;">Bara den här datorn — inget lösenord</button>
             </div>`;
         document.body.appendChild(dialog);
         document.getElementById("lösenord-spara").addEventListener("click", async () => {
