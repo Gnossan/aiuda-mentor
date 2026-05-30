@@ -191,7 +191,7 @@ let valdModell = "claude-sonnet-4-6";
 const MODELLER = [
     { id: "claude-sonnet-4-6",          label: "S", titel: "Sonnet (standard)" },
     { id: "claude-haiku-4-5-20251001",   label: "H", titel: "Haiku (snabb)" },
-    { id: "claude-opus-4-7",             label: "O", titel: "Opus (djupast — kan timeout:a)" }
+    { id: "claude-opus-4-8",             label: "O", titel: "Opus (djupast — kan timeout:a)" }
 ];
 
 function uppdateraModellKnapp() {
