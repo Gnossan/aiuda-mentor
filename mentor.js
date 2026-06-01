@@ -1523,13 +1523,20 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
         lookupKnapp?.remove();
         lookupKnapp = null;
 
-        const urval = window.getSelection();
-        if (!urval || urval.isCollapsed) return;
-        const text = urval.toString().trim().replace(/\s+/g, " ");
-        if (!text || text.length > 300) return;
-
-        const range = urval.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
+        // Textarea använder selectionStart/End, DOM-text använder getSelection()
+        let text, rect;
+        if (e.currentTarget.tagName === "TEXTAREA") {
+            const ta = e.currentTarget;
+            text = ta.value.slice(ta.selectionStart, ta.selectionEnd).trim();
+            if (!text || text.length > 300) return;
+            rect = ta.getBoundingClientRect();
+        } else {
+            const urval = window.getSelection();
+            if (!urval || urval.isCollapsed) return;
+            text = urval.toString().trim().replace(/\s+/g, " ");
+            if (!text || text.length > 300) return;
+            rect = urval.getRangeAt(0).getBoundingClientRect();
+        }
 
         const knapp = document.createElement("button");
         knapp.textContent = "?";
