@@ -1556,12 +1556,12 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
         knapp.addEventListener("click", async (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
-            console.log("?-knapp klickad, text:", text);
+            const knappRect = knapp.getBoundingClientRect();
             knapp.remove();
             lookupKnapp = null;
 
-            const x = Math.min(rect.right + 8, window.innerWidth - 280);
-            const y = rect.bottom + 8;
+            const x = Math.min(knappRect.right + 8, window.innerWidth - 280);
+            const y = Math.min(knappRect.bottom + 8, window.innerHeight - 120);
 
             // Laddnings-popup
             visaLookupLadd(x, y, text);
