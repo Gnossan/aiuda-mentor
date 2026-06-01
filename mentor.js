@@ -1553,9 +1553,10 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
         document.body.appendChild(knapp);
         lookupKnapp = knapp;
 
-        knapp.addEventListener("mousedown", async (ev) => {
+        knapp.addEventListener("click", async (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
+            console.log("?-knapp klickad, text:", text);
             knapp.remove();
             lookupKnapp = null;
 
