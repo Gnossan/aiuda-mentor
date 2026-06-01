@@ -1513,7 +1513,12 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
 (function() {
     let lookupKnapp = null;
 
-    document.getElementById("meddelanden").addEventListener("mouseup", (e) => {
+    // Orduppslagning funkar i chattfönstret OCH i inmatningsfältet
+    const lookupTargets = [
+        document.getElementById("meddelanden"),
+        document.getElementById("input")
+    ];
+    lookupTargets.forEach(target => target.addEventListener("mouseup", (e) => {
         if (e.target === lookupKnapp) return;
         lookupKnapp?.remove();
         lookupKnapp = null;
@@ -1569,7 +1574,7 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
                 document.getElementById("ar-lookup-popup")?.remove();
             }
         });
-    });
+    })); // stänger forEach
 
     document.addEventListener("mousedown", (e) => {
         if (e.target === lookupKnapp) return;
