@@ -1540,10 +1540,17 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
 
         const knapp = document.createElement("button");
         knapp.textContent = "?";
+        // För textarea: placera ovanför fältet till höger, annars vid markeringen
+        const knappLeft = e.currentTarget.tagName === "TEXTAREA"
+            ? rect.right - 28
+            : Math.min(rect.right + 6, window.innerWidth - 36);
+        const knappTop = e.currentTarget.tagName === "TEXTAREA"
+            ? rect.top - 28
+            : rect.top - 4;
         knapp.style.cssText = `
             position:fixed;
-            left:${Math.min(rect.right + 6, window.innerWidth - 36)}px;
-            top:${rect.top - 4}px;
+            left:${knappLeft}px;
+            top:${knappTop}px;
             background:#1a1610;color:#f0c040;
             border:1px solid #f0c040;border-radius:50%;
             width:22px;height:22px;font-size:13px;font-weight:700;
