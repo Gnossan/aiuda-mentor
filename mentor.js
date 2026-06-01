@@ -1519,7 +1519,7 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
         document.getElementById("input")
     ];
     lookupTargets.forEach(target => target.addEventListener("mouseup", (e) => {
-        if (e.target === lookupKnapp) return;
+        if (e.target === lookupKnapp || e.target.closest?.("#ar-lookup-popup")) return;
         lookupKnapp?.remove();
         lookupKnapp = null;
 
