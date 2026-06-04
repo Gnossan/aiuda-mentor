@@ -1,3 +1,5 @@
+// ⚠️  AUTOGENERERAD FIL — redigera inte direkt!
+// Källkod finns i src/. Kör: npm run build
 var AiudaMentor = (() => {
   // src/state.js
   var S = {

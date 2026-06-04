@@ -10,6 +10,9 @@ const ctx = await esbuild.context({
   sourcemap: false,
   external: [],
   logLevel: "info",
+  banner: {
+    js: "// ⚠️  AUTOGENERERAD FIL — redigera inte direkt!\n// Källkod finns i src/. Kör: npm run build",
+  },
 });
 if (watch) {
   await ctx.watch();
