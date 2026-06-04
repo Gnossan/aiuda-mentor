@@ -1798,6 +1798,29 @@ Anv\xE4nd denna annotation som bakgrundskunskap i konversationen.`;
     document.getElementById("tema-knapp").textContent = ljust ? "\u{1F319}" : "\u2600";
     chrome.storage.local.set({ tema });
   });
+  var FONT_SEKTIONER_MENTOR = ["meddelanden", "projekt-liste", "anteckningar-area", "task-lista", "k\xE4ll-lista", "l\xE4slogg-lista", "logg-lista"];
+  var FONT_MIN_M = 10;
+  var FONT_MAX_M = 22;
+  var FONT_DEFAULT_M = 13;
+  chrome.storage.local.get("mentorFontSizes", ({ mentorFontSizes = {} }) => {
+    FONT_SEKTIONER_MENTOR.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && mentorFontSizes[id]) el.style.fontSize = mentorFontSizes[id] + "px";
+    });
+  });
+  document.addEventListener("wheel", (e) => {
+    if (!e.shiftKey) return;
+    e.preventDefault();
+    const sektionEl = e.target.closest(FONT_SEKTIONER_MENTOR.map((id) => "#" + id).join(", "));
+    if (!sektionEl) return;
+    const nuvarande = parseFloat(sektionEl.style.fontSize) || FONT_DEFAULT_M;
+    const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    const ny = delta > 0 ? Math.max(FONT_MIN_M, nuvarande - 1) : Math.min(FONT_MAX_M, nuvarande + 1);
+    sektionEl.style.fontSize = ny + "px";
+    chrome.storage.local.get("mentorFontSizes", ({ mentorFontSizes = {} }) => {
+      chrome.storage.local.set({ mentorFontSizes: { ...mentorFontSizes, [sektionEl.id]: ny } });
+    });
+  }, { passive: false });
   initBokm\u00E4rke();
   initHighlight();
   initResizerFr\u00E5nStorage();

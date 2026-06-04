@@ -399,6 +399,34 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
     chrome.storage.local.set({ tema });
 });
 
+// ── Shift+scroll: textstorlek per fönsterdel ──────────────────────────────
+
+const FONT_SEKTIONER_MENTOR = ["meddelanden", "projekt-liste", "anteckningar-area", "task-lista", "käll-lista", "läslogg-lista", "logg-lista"];
+const FONT_MIN_M = 10, FONT_MAX_M = 22, FONT_DEFAULT_M = 13;
+
+chrome.storage.local.get("mentorFontSizes", ({ mentorFontSizes = {} }) => {
+    FONT_SEKTIONER_MENTOR.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && mentorFontSizes[id]) el.style.fontSize = mentorFontSizes[id] + "px";
+    });
+});
+
+document.addEventListener("wheel", (e) => {
+    if (!e.shiftKey) return;
+    e.preventDefault();
+    const sektionEl = e.target.closest(FONT_SEKTIONER_MENTOR.map(id => "#" + id).join(", "));
+    if (!sektionEl) return;
+    const nuvarande = parseFloat(sektionEl.style.fontSize) || FONT_DEFAULT_M;
+    const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    const ny = delta > 0
+        ? Math.max(FONT_MIN_M, nuvarande - 1)
+        : Math.min(FONT_MAX_M, nuvarande + 1);
+    sektionEl.style.fontSize = ny + "px";
+    chrome.storage.local.get("mentorFontSizes", ({ mentorFontSizes = {} }) => {
+        chrome.storage.local.set({ mentorFontSizes: { ...mentorFontSizes, [sektionEl.id]: ny } });
+    });
+}, { passive: false });
+
 // ── Initiera alla subsystem ────────────────────────────────────────────────
 
 initBokmärke();
