@@ -3,6 +3,8 @@ let historik = [];
 let systemprompt = "";
 let sessionId = null;
 let aktivtProjekt = null;
+let bokmärke = null; // { bubbleIdx, charOffset } | null
+let bubblaNummer = 0;
 let nuvarandeSessionId = "session_" + Date.now();
 let sessionStartIndex = 0;
 let t = AR_LOCALES.sv; // Default svenska
@@ -474,6 +476,10 @@ async function raderaProjekt(id, namn) {
     if (aktivtProjekt?.id === id) {
         aktivtProjekt = null;
         historik = [];
+        bubblaNummer = 0;
+        bokmärke = null;
+        document.querySelector(".aiuda-bm-marker")?.remove();
+        document.getElementById("bokmärk-hopp").style.display = "none";
         document.getElementById("meddelanden").innerHTML = "";
         document.getElementById("meddelanden").style.display = "none";
         document.getElementById("input-area").style.display = "none";
@@ -553,8 +559,15 @@ async function öppnaProjekt(projekt) {
 
     // Ladda historik
     document.getElementById("meddelanden").innerHTML = "";
+    bubblaNummer = 0;
+    bokmärke = null;
+    document.getElementById("bokmärk-hopp").style.display = "none";
     let laddadHistorik = null;
     let laddadFrånFirebase = false;
+
+    // Ladda alltid bokmärke från local storage
+    const sparadLokal = await chrome.storage.local.get(sessionId);
+    bokmärke = sparadLokal[sessionId]?.bokmärke || null;
 
     try {
         const fjärr = await chrome.runtime.sendMessage({ type: "LOAD_HISTORIK", projektId: sessionId });
@@ -565,8 +578,7 @@ async function öppnaProjekt(projekt) {
     } catch {}
 
     if (!laddadHistorik) {
-        const sparad = await chrome.storage.local.get(sessionId);
-        laddadHistorik = sparad[sessionId]?.historik || null;
+        laddadHistorik = sparadLokal[sessionId]?.historik || null;
     }
 
     if (laddadHistorik?.length > 0) {
@@ -579,6 +591,8 @@ async function öppnaProjekt(projekt) {
             laggTillBubbla(msg.role, text, false, msg.tid || null);
         });
         document.getElementById("meddelanden").scrollTop = document.getElementById("meddelanden").scrollHeight;
+        // Återställ bokmärke
+        if (bokmärke) återställBokmärke();
     } else {
         historik = [];
         sessionStartIndex = 0;
@@ -820,7 +834,7 @@ async function startaKonversation() {
 
 async function sparaHistorik(synkaFirebase = false) {
     if (!sessionId) return;
-    await chrome.storage.local.set({ [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik } });
+    await chrome.storage.local.set({ [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik, bokmärke } });
     if (synkaFirebase && krypteringsNyckel) {
         try {
             const krypteradHistorik = await kryptera(historik);
@@ -1283,10 +1297,13 @@ function formateraBubblaTid(iso) {
 }
 
 function laggTillBubbla(roll, text, skrolla = true, tid = null) {
+    const idx = bubblaNummer++;
     const div = document.createElement("div");
     div.className = `bubbla ${roll}`;
+    div.dataset.bubbleIdx = idx;
     if (roll === "assistant") div.innerHTML = DOMPurify.sanitize(marked.parse(text));
     else div.textContent = text;
+
     const container = document.getElementById("meddelanden");
     container.appendChild(div);
 
@@ -1303,6 +1320,78 @@ function laggTillBubbla(roll, text, skrolla = true, tid = null) {
     }
 }
 
+// Räknar tecken-offset från start av bubblan till en Range-position
+function getCharOffset(bubbleEl, range) {
+    const walker = document.createTreeWalker(bubbleEl, NodeFilter.SHOW_TEXT);
+    let offset = 0;
+    let node;
+    while ((node = walker.nextNode())) {
+        if (node === range.startContainer) return offset + range.startOffset;
+        offset += node.textContent.length;
+    }
+    return offset;
+}
+
+// Infogar bokmärkesmarkören vid given tecken-offset i bubblan
+function insättBokmärkesMarkör(bubbleEl, charOffset) {
+    const walker = document.createTreeWalker(bubbleEl, NodeFilter.SHOW_TEXT);
+    let offset = 0;
+    let node;
+    while ((node = walker.nextNode())) {
+        const len = node.textContent.length;
+        if (offset + len >= charOffset) {
+            const range = document.createRange();
+            const localOffset = Math.min(charOffset - offset, len);
+            range.setStart(node, localOffset);
+            range.collapse(true);
+            const marker = document.createElement("span");
+            marker.className = "aiuda-bm-marker";
+            marker.title = "Bokmärke — klicka för att ta bort";
+            marker.textContent = "🔖";
+            range.insertNode(marker);
+            return;
+        }
+        offset += len;
+    }
+}
+
+function sättBokmärke(bubbleIdx, charOffset) {
+    // Ta bort gammalt bokmärke från DOM
+    document.querySelector(".aiuda-bm-marker")?.remove();
+
+    const hoppBtn = document.getElementById("bokmärk-hopp");
+
+    if (bubbleIdx >= 0) {
+        bokmärke = { bubbleIdx, charOffset };
+        const el = document.querySelector(`[data-bubble-idx="${bubbleIdx}"]`);
+        if (el) insättBokmärkesMarkör(el, charOffset);
+        if (hoppBtn) hoppBtn.style.display = "inline-block";
+    } else {
+        bokmärke = null;
+        if (hoppBtn) hoppBtn.style.display = "none";
+    }
+
+    if (sessionId) {
+        chrome.storage.local.set({
+            [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik, bokmärke }
+        });
+    }
+}
+
+function återställBokmärke() {
+    if (!bokmärke) return;
+    const el = document.querySelector(`[data-bubble-idx="${bokmärke.bubbleIdx}"]`);
+    if (el) {
+        insättBokmärkesMarkör(el, bokmärke.charOffset);
+        document.getElementById("bokmärk-hopp").style.display = "inline-block";
+    }
+}
+
+document.getElementById("bokmärk-hopp").addEventListener("click", () => {
+    const marker = document.querySelector(".aiuda-bm-marker");
+    if (marker) marker.scrollIntoView({ behavior: "smooth", block: "center" });
+});
+
 function visaTänker() {
     const div = document.createElement("div");
     div.className = "ar-tänker";
@@ -1314,8 +1403,27 @@ function visaTänker() {
 }
 
 document.getElementById("meddelanden").addEventListener("click", (e) => {
+    // Länkklick
     const länk = e.target.closest("a");
-    if (länk?.href) { e.preventDefault(); chrome.tabs.create({ url: länk.href }); }
+    if (länk?.href) { e.preventDefault(); chrome.tabs.create({ url: länk.href }); return; }
+
+    // Klick på befintlig bokmärkesmarkör → ta bort
+    if (e.target.classList.contains("aiuda-bm-marker")) {
+        sättBokmärke(-1, 0);
+        return;
+    }
+
+    // Klick i bubbla utan textmarkering → sätt bokmärke
+    const bubbla = e.target.closest(".bubbla");
+    if (!bubbla) return;
+    if (e.target.closest(".aiuda-hl")) return; // inte på highlight
+    if (window.getSelection()?.toString().trim()) return; // inte om text är markerad
+
+    const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+    if (!range) return;
+    const bubbleIdx = parseInt(bubbla.dataset.bubbleIdx);
+    const charOffset = getCharOffset(bubbla, range);
+    sättBokmärke(bubbleIdx, charOffset);
 });
 
 // ============================================================
