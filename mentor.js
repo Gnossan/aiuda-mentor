@@ -5,6 +5,7 @@ let sessionId = null;
 let aktivtProjekt = null;
 let bokmärke = null; // { bubbleIdx, charOffset } | null
 let bubblaNummer = 0;
+let kontrastKarta = {}; // "bubbelIdx:elIdx" → opacity
 let nuvarandeSessionId = "session_" + Date.now();
 let sessionStartIndex = 0;
 let t = AR_LOCALES.sv; // Default svenska
@@ -478,6 +479,7 @@ async function raderaProjekt(id, namn) {
         historik = [];
         bubblaNummer = 0;
         bokmärke = null;
+        kontrastKarta = {};
         document.querySelector(".aiuda-bm-marker")?.remove();
         document.getElementById("bokmärk-hopp").style.display = "none";
         document.getElementById("meddelanden").innerHTML = "";
@@ -561,6 +563,7 @@ async function öppnaProjekt(projekt) {
     document.getElementById("meddelanden").innerHTML = "";
     bubblaNummer = 0;
     bokmärke = null;
+    kontrastKarta = {};
     document.getElementById("bokmärk-hopp").style.display = "none";
     let laddadHistorik = null;
     let laddadFrånFirebase = false;
@@ -568,6 +571,7 @@ async function öppnaProjekt(projekt) {
     // Ladda alltid bokmärke från local storage
     const sparadLokal = await chrome.storage.local.get(sessionId);
     bokmärke = sparadLokal[sessionId]?.bokmärke || null;
+    kontrastKarta = sparadLokal[sessionId]?.kontrastKarta || {};
 
     try {
         const fjärr = await chrome.runtime.sendMessage({ type: "LOAD_HISTORIK", projektId: sessionId });
@@ -591,8 +595,9 @@ async function öppnaProjekt(projekt) {
             laggTillBubbla(msg.role, text, false, msg.tid || null);
         });
         document.getElementById("meddelanden").scrollTop = document.getElementById("meddelanden").scrollHeight;
-        // Återställ bokmärke
+        // Återställ bokmärke och kontrast
         if (bokmärke) återställBokmärke();
+        återställKontrast();
     } else {
         historik = [];
         sessionStartIndex = 0;
@@ -834,7 +839,7 @@ async function startaKonversation() {
 
 async function sparaHistorik(synkaFirebase = false) {
     if (!sessionId) return;
-    await chrome.storage.local.set({ [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik, bokmärke } });
+    await chrome.storage.local.set({ [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik, bokmärke, kontrastKarta } });
     if (synkaFirebase && krypteringsNyckel) {
         try {
             const krypteradHistorik = await kryptera(historik);
@@ -1373,8 +1378,24 @@ function sättBokmärke(bubbleIdx, charOffset) {
 
     if (sessionId) {
         chrome.storage.local.set({
-            [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik, bokmärke }
+            [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik, bokmärke, kontrastKarta }
         });
+    }
+}
+
+function återställKontrast() {
+    for (const [nyckel, opacity] of Object.entries(kontrastKarta)) {
+        const [bubbleIdx, elPart] = nyckel.split(":");
+        const bubbla = document.querySelector(`[data-bubble-idx="${bubbleIdx}"]`);
+        if (!bubbla) continue;
+        if (elPart === "self") {
+            bubbla.style.opacity = opacity;
+            bubbla.dataset.kontrastOpacity = opacity;
+        } else {
+            const syskon = Array.from(bubbla.querySelectorAll("p, li, h1, h2, h3, h4, blockquote, pre"));
+            const el = syskon[parseInt(elPart)];
+            if (el) { el.style.opacity = opacity; el.dataset.kontrastOpacity = opacity; }
+        }
     }
 }
 
@@ -1882,5 +1903,51 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
     document.addEventListener("mousedown", (e) => {
         if (hlToolbar && !hlToolbar.contains(e.target)) taBortHlToolbar();
     });
+
+    // ── Alt+scroll: justera kontrast på hovrat textstycke ──────────────────
+    function kontrastNyckel(bubbla, textEl) {
+        const bubbleIdx = bubbla.dataset.bubbleIdx ?? "-1";
+        if (bubbla.classList.contains("user")) return `${bubbleIdx}:self`;
+        const syskon = Array.from(bubbla.querySelectorAll("p, li, h1, h2, h3, h4, blockquote, pre"));
+        const elIdx = syskon.indexOf(textEl);
+        return `${bubbleIdx}:${elIdx}`;
+    }
+
+    // återställKontrast definieras i global scope — se nedan
+
+    document.getElementById("meddelanden").addEventListener("wheel", (e) => {
+        if (!e.altKey) return;
+        e.preventDefault();
+
+        const under = document.elementFromPoint(e.clientX, e.clientY);
+        const bubbla = under?.closest(".bubbla");
+        if (!bubbla) return;
+        const textEl = under.closest("p, li, h1, h2, h3, h4, blockquote, pre")
+                    ?? (bubbla.classList.contains("user") ? bubbla : null);
+        if (!textEl) return;
+
+        const nuvarande = parseFloat(textEl.dataset.kontrastOpacity) || 1;
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        const nästa = Math.min(1, Math.max(0.15, Math.round((nuvarande + delta) * 10) / 10));
+        textEl.dataset.kontrastOpacity = nästa;
+        textEl.style.opacity = nästa;
+
+        const nyckel = kontrastNyckel(bubbla, textEl);
+        if (nästa < 1) {
+            kontrastKarta[nyckel] = nästa;
+        } else {
+            delete kontrastKarta[nyckel];
+        }
+
+        // Debounce-spara (max 1 gång per 800ms)
+        clearTimeout(kontrastSparTimer);
+        kontrastSparTimer = setTimeout(() => {
+            if (sessionId) chrome.storage.local.set({
+                [sessionId]: { namn: aktivtProjekt?.namn, fraga: aktivtProjekt?.fraga, historik, bokmärke, kontrastKarta }
+            });
+        }, 800);
+    }, { passive: false });
+
+    let kontrastSparTimer = null;
 
 })();
