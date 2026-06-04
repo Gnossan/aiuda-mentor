@@ -1624,4 +1624,155 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
         document.body.appendChild(popup);
         setTimeout(() => { document.addEventListener("mousedown", () => popup.remove(), { once: true }); }, 100);
     }
+
+    // ===== HIGHLIGHT I CHATTBUBBLOR =====
+    const HL_FÄRGER = [
+        { namn: "viktigt",    label: "Viktigt",    bg: "rgba(255,210,0,0.35)",   border: "rgba(255,210,0,0.7)" },
+        { namn: "fakta",      label: "Fakta",      bg: "rgba(80,200,120,0.35)",  border: "rgba(80,200,120,0.7)" },
+        { namn: "kontext",    label: "Kontext",    bg: "rgba(90,160,255,0.35)",  border: "rgba(90,160,255,0.7)" },
+        { namn: "definition", label: "Definition", bg: "rgba(190,110,255,0.35)", border: "rgba(190,110,255,0.7)" },
+        { namn: "kritik",     label: "Kritik",     bg: "rgba(255,90,90,0.35)",   border: "rgba(255,90,90,0.7)" },
+    ];
+
+    let hlToolbar = null;
+
+    function taBortHlToolbar() {
+        hlToolbar?.remove();
+        hlToolbar = null;
+    }
+
+    function läggTillINotat(text) {
+        const area = document.getElementById("anteckningar-area");
+        if (!area) return;
+        const befintligt = area.value.trim();
+        const ny = befintligt ? befintligt + "\n\n" + text : text;
+        area.value = ny;
+        area.dispatchEvent(new Event("input"));
+    }
+
+    function appliceraPennfärg(färg) {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) return;
+
+        const markerad = sel.toString().trim();
+        if (!markerad) return;
+
+        try {
+            const range = sel.getRangeAt(0);
+            const span = document.createElement("span");
+            span.className = "aiuda-hl";
+            span.dataset.hlFärg = färg.namn;
+            span.style.cssText = `background:${färg.bg};border-bottom:2px solid ${färg.border};border-radius:2px;cursor:pointer;padding:0 1px;`;
+            span.title = `${färg.label} — klicka för att ta bort`;
+
+            // surroundContents fungerar bara om selection är inom ett element
+            try {
+                range.surroundContents(span);
+            } catch {
+                // Selection spänner flera element — använd extractContents
+                const fragment = range.extractContents();
+                span.appendChild(fragment);
+                range.insertNode(span);
+            }
+
+            sel.removeAllRanges();
+            läggTillINotat(`[${färg.label}] "${markerad}"`);
+            sparaAnteckningarOchTasks();
+        } catch (e) {
+            console.warn("Highlight misslyckades:", e.message);
+        }
+    }
+
+    function visaHlToolbar(x, y) {
+        taBortHlToolbar();
+
+        const toolbar = document.createElement("div");
+        toolbar.id = "aiuda-hl-toolbar";
+        toolbar.style.cssText = `
+            position:fixed;left:${x}px;top:${y - 44}px;
+            background:#1a1610;border:1px solid #444;border-radius:8px;
+            padding:6px 8px;display:flex;gap:6px;align-items:center;
+            z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.5);
+        `;
+
+        HL_FÄRGER.forEach(f => {
+            const knapp = document.createElement("button");
+            knapp.title = f.label;
+            knapp.style.cssText = `
+                width:22px;height:22px;border-radius:50%;cursor:pointer;
+                background:${f.bg};border:2px solid ${f.border};
+                transition:transform 0.1s;
+            `;
+            knapp.addEventListener("mouseenter", () => knapp.style.transform = "scale(1.2)");
+            knapp.addEventListener("mouseleave", () => knapp.style.transform = "");
+            knapp.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                appliceraPennfärg(f);
+                taBortHlToolbar();
+            });
+            toolbar.appendChild(knapp);
+        });
+
+        // Radergummi
+        const radera = document.createElement("button");
+        radera.textContent = "✕";
+        radera.title = "Ta bort markering";
+        radera.style.cssText = `
+            width:22px;height:22px;border-radius:50%;cursor:pointer;
+            background:transparent;border:1px solid #555;color:#f5f0e8;
+            font-size:11px;opacity:0.6;transition:opacity 0.15s;
+        `;
+        radera.addEventListener("mouseenter", () => radera.style.opacity = "1");
+        radera.addEventListener("mouseleave", () => radera.style.opacity = "0.6");
+        radera.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            // Ta bort markerade span under cursor om ingen selektion
+            taBortHlToolbar();
+        });
+        toolbar.appendChild(radera);
+
+        document.body.appendChild(toolbar);
+        hlToolbar = toolbar;
+
+        // Justera om toolbar hamnar utanför fönstret
+        const r = toolbar.getBoundingClientRect();
+        if (r.right > window.innerWidth) toolbar.style.left = `${x - r.width}px`;
+        if (r.top < 0) toolbar.style.top = `${y + 10}px`;
+    }
+
+    // Lyssna på textmarkering i chattbubblor
+    document.getElementById("meddelanden")?.addEventListener("mouseup", (e) => {
+        setTimeout(() => {
+            const sel = window.getSelection();
+            if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
+
+            // Kolla att selection är inom en bubbla
+            const node = sel.anchorNode;
+            if (!node) return;
+            const bubbla = node.parentElement?.closest?.(".bubbla");
+            if (!bubbla) return;
+
+            const range = sel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            visaHlToolbar(rect.left, rect.top);
+        }, 10);
+    });
+
+    // Klick på befintlig highlight — ta bort
+    document.getElementById("meddelanden")?.addEventListener("click", (e) => {
+        const hl = e.target.closest(".aiuda-hl");
+        if (!hl) return;
+        // Ersätt span med dess textinnehåll
+        const parent = hl.parentNode;
+        while (hl.firstChild) parent.insertBefore(hl.firstChild, hl);
+        parent.removeChild(hl);
+        taBortHlToolbar();
+    });
+
+    // Stäng toolbar vid klick utanför
+    document.addEventListener("mousedown", (e) => {
+        if (hlToolbar && !hlToolbar.contains(e.target)) taBortHlToolbar();
+    });
+
 })();
