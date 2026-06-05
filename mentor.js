@@ -1798,7 +1798,7 @@ Anv\xE4nd denna annotation som bakgrundskunskap i konversationen.`;
     document.getElementById("tema-knapp").textContent = ljust ? "\u{1F319}" : "\u2600";
     chrome.storage.local.set({ tema });
   });
-  var FONT_SEKTIONER_MENTOR = ["meddelanden", "projekt-liste", "anteckningar-area", "task-lista", "k\xE4ll-lista", "l\xE4slogg-lista", "logg-lista"];
+  var FONT_SEKTIONER_MENTOR = ["meddelanden", "projekt-liste", "anteckningar-area", "task-lista", "k\xE4ll-lista", "l\xE4slogg-lista", "logg-lista", "chatt-header"];
   var FONT_MIN_M = 10;
   var FONT_MAX_M = 22;
   var FONT_DEFAULT_M = 13;

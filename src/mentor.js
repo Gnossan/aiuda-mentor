@@ -401,7 +401,7 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
 
 // ── Shift+scroll: textstorlek per fönsterdel ──────────────────────────────
 
-const FONT_SEKTIONER_MENTOR = ["meddelanden", "projekt-liste", "anteckningar-area", "task-lista", "käll-lista", "läslogg-lista", "logg-lista"];
+const FONT_SEKTIONER_MENTOR = ["meddelanden", "projekt-liste", "anteckningar-area", "task-lista", "käll-lista", "läslogg-lista", "logg-lista", "chatt-header"];
 const FONT_MIN_M = 10, FONT_MAX_M = 22, FONT_DEFAULT_M = 13;
 
 chrome.storage.local.get("mentorFontSizes", ({ mentorFontSizes = {} }) => {
