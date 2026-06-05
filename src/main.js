@@ -108,8 +108,9 @@ onAuth(async (user) => {
     document.getElementById("login-vy").style.display = "none";
     document.getElementById("välkommen").style.display = "flex";
 
-    await laddaEllerSkapaNyckel(user.email);
-    await laddaProjektlista();
+    // Kör parallellt — projekten behöver inte nyckeln för att listas
+    laddaEllerSkapaNyckel(user.email);
+    laddaProjektlista();
 });
 
 document.getElementById("login-knapp")?.addEventListener("click", () => loggaIn());
