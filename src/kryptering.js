@@ -1,6 +1,7 @@
 // src/kryptering.js — kryptering, nyckelhantering, dialoger
 
 import { S } from "./state.js";
+import { sparaKrypteringsnyckel, hämtaKrypteringsnyckel } from "./api.js";
 
 // ── Hjälpfunktioner ────────────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ export async function visaLösenordsDialog(email) {
             if (!lösenord || lösenord.length < 8) { felEl.textContent = "Minst 8 tecken"; felEl.style.display = "block"; return; }
             if (lösenord !== lösenord2) { felEl.textContent = "Lösenorden matchar inte"; felEl.style.display = "block"; return; }
             const nyckelData = await exporteraNyckelMedLösenord(lösenord);
-            const resultat = await chrome.runtime.sendMessage({ type: "SAVE_ENCRYPTION_KEY", nyckelData });
+            const resultat = await sparaKrypteringsnyckel(nyckelData);
             if (resultat?.ok) {
                 await sparaILösenordshanterare(email, lösenord);
                 dialog.remove(); resolve(true);
@@ -158,9 +159,9 @@ export async function visaLösenordsDialog(email) {
 // ── Ladda eller skapa nyckel ───────────────────────────────────────────────
 
 export async function laddaEllerSkapaNyckel(email) {
-    await chrome.storage.local.remove("aiudaEncryptedKey");
+    localStorage.removeItem("aiudaEncryptedKey");
 
-    const fjärrNyckel = await chrome.runtime.sendMessage({ type: "GET_ENCRYPTION_KEY" });
+    const fjärrNyckel = await hämtaKrypteringsnyckel();
 
     if (fjärrNyckel?.wrappedKey) {
         if (window.PasswordCredential) {

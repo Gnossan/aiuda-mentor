@@ -9,7 +9,7 @@ export function uppdateraXPVisning() {
 
 export function läggTillXP(mängd) {
     S.totalXP += mängd;
-    chrome.storage.local.set({ mentorXP: S.totalXP });
+    localStorage.setItem("mentorXP", S.totalXP);
     uppdateraXPVisning();
     const el = document.getElementById("xp-visning");
     if (el) {

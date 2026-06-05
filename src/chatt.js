@@ -6,6 +6,7 @@ import { sparaHistorik } from "./session.js";
 import { läggTillXP } from "./xp.js";
 import { läggTillKälla, extraheraKällorFrånText, sparaAnteckningarOchTasks, laddaLogg } from "./notat.js";
 import { läslogg, setLäslogg } from "./state.js";
+import { chat, sök } from "./api.js";
 
 // ── Systemprompt ───────────────────────────────────────────────────────────
 
@@ -41,13 +42,13 @@ export async function hanteraAISvar(svar, tänker) {
         }
         const renText = assistantText.replace(/\[SEARCH:\s*.+?\]/g, "").trim();
         if (renText) S.historik.push({ role: "assistant", content: renText, silent: true });
-        const sokSvar = await chrome.runtime.sendMessage({ type: "SEARCH", query });
+        const sokSvar = await sök(query);
         if (sokSvar?.results?.length) {
             sokSvar.results.forEach(r => läggTillKälla(r.title, r.url));
             const sokContent = `[Web search results for "${query}"]\n` +
                 sokSvar.results.map(r => `${r.title}\n${r.url}\n${r.snippet}`).join("\n\n");
             S.historik.push({ role: "user", content: sokContent, silent: true });
-            const finalSvar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt: S.systemprompt, historik: S.historik, model: S.valdModell });
+            const finalSvar = await chat(S.systemprompt, S.historik, S.valdModell);
             assistantText = tolkSvar(finalSvar);
         } else {
             assistantText = renText || assistantText;
@@ -65,7 +66,7 @@ export async function startaKonversation() {
     S.historik.push({ role: "user", content: fraga, silent: true });
     await sparaHistorik();
     const tänker = visaTänker();
-    const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt: S.systemprompt, historik: S.historik, model: S.valdModell });
+    const svar = await chat(S.systemprompt, S.historik, S.valdModell);
     const assistantText = await hanteraAISvar(svar, tänker);
     laggTillBubbla("assistant", assistantText);
     S.historik.push({ role: "assistant", content: assistantText });
@@ -107,7 +108,7 @@ export async function skicka(kort = false) {
     input.style.height = "44px";
     await sparaHistorik();
     const tänker = visaTänker();
-    const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt: S.systemprompt, historik: S.historik, model: S.valdModell });
+    const svar = await chat(S.systemprompt, S.historik, S.valdModell);
     document.getElementById("avbryt-knapp").style.display = "none";
     pågårSvar = false;
     if (avbrutit) {
@@ -151,12 +152,7 @@ export function initQuiz() {
 Questions should be open-ended, not yes/no. Language: same as the conversation.`;
 
         const sessionHistorik = S.historik.slice(S.sessionStartIndex).filter(m => !m.silent);
-        const svar = await chrome.runtime.sendMessage({
-            type: "CHAT",
-            systemprompt: S.systemprompt,
-            historik: [...sessionHistorik, { role: "user", content: quizPrompt }],
-            model: S.valdModell
-        });
+        const svar = await chat(S.systemprompt, [...sessionHistorik, { role: "user", content: quizPrompt }], S.valdModell);
 
         knapp.textContent = "🎓";
         knapp.disabled = false;
@@ -190,12 +186,7 @@ Evaluate briefly (1-2 sentences) and give a score: "correct", "partial", or "inc
 Return JSON: {"feedback": "...", "score": "correct|partial|incorrect"}`;
 
     const tänker = visaTänker();
-    const svar = await chrome.runtime.sendMessage({
-        type: "CHAT",
-        systemprompt: S.systemprompt,
-        historik: [{ role: "user", content: evalPrompt }],
-        model: "claude-haiku-4-5-20251001"
-    });
+    const svar = await chat(S.systemprompt, [{ role: "user", content: evalPrompt }], "claude-haiku-4-5-20251001");
     tänker.remove();
 
     const rawText = svar?.result?.content?.[0]?.text || "";

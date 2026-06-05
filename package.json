@@ -3,10 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.js",
-    "watch": "node build.js --watch"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.6",
+    "firebase": "^12.14.0",
+    "marked": "^18.0.4"
   },
   "devDependencies": {
-    "esbuild": "^0.28.0"
+    "vite": "latest"
   }
 }

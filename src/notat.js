@@ -5,22 +5,24 @@ import { anteckningarSparade, setAnteckningarSparade, läslogg, setLäslogg } fr
 import { kryptera, dekryptera } from "./kryptering.js";
 import { läggTillXP } from "./xp.js";
 import { laggTillBubbla } from "./ui.js";
+import { sparaAnteckningarRemote, laddaAnteckningarRemote, laddaLoggRemote } from "./api.js";
+import DOMPurify from "dompurify";
 
 // ── Anteckningar & Tasks ───────────────────────────────────────────────────
 
 export async function laddaAnteckningarOchTasks() {
     if (S.krypteringsNyckel) {
         try {
-            const fjärr = await chrome.runtime.sendMessage({ type: "LOAD_ANTECKNINGAR", projektId: S.sessionId });
+            const fjärr = await laddaAnteckningarRemote(S.sessionId);
             if (fjärr?.krypteradAnteckningar) {
                 const dekrypterad = await dekryptera(fjärr.krypteradAnteckningar);
                 document.getElementById("anteckningar-area").value = dekrypterad.anteckningar || "";
                 setAnteckningarSparade(dekrypterad.anteckningar || "");
                 S.tasks = dekrypterad.tasks || [];
                 renderaTasks();
-                await chrome.storage.local.set({
-                    [`anteckningar_${S.sessionId}`]: { anteckningar: dekrypterad.anteckningar || "", tasks: dekrypterad.tasks || [] }
-                });
+                localStorage.setItem(`anteckningar_${S.sessionId}`, JSON.stringify({
+                    anteckningar: dekrypterad.anteckningar || "", tasks: dekrypterad.tasks || []
+                }));
             }
             if (fjärr?.krypteradeKällor) {
                 const dekKällor = await dekryptera(fjärr.krypteradeKällor);
@@ -33,11 +35,11 @@ export async function laddaAnteckningarOchTasks() {
                 renderaLäslogg();
             }
             if (fjärr?.krypteradAnteckningar || fjärr?.krypteradeKällor || fjärr?.krypteradLäslogg) return;
-        } catch (e) { console.warn("Firebase-laddning misslyckades:", e.message); }
+        } catch (e) { console.warn("Backend-laddning misslyckades:", e.message); }
     }
 
-    const sparad = await chrome.storage.local.get(`anteckningar_${S.sessionId}`);
-    const data = sparad[`anteckningar_${S.sessionId}`] || {};
+    const sparadRaw = localStorage.getItem(`anteckningar_${S.sessionId}`);
+    const data = sparadRaw ? JSON.parse(sparadRaw) : {};
     document.getElementById("anteckningar-area").value = data.anteckningar || "";
     setAnteckningarSparade(data.anteckningar || "");
     S.tasks = data.tasks || [];
@@ -46,17 +48,12 @@ export async function laddaAnteckningarOchTasks() {
 
 export async function sparaAnteckningarOchTasks(synkaFirebase = false) {
     const anteckningar = document.getElementById("anteckningar-area").value;
-    await chrome.storage.local.set({
-        [`anteckningar_${S.sessionId}`]: { anteckningar, tasks: S.tasks }
-    });
+    localStorage.setItem(`anteckningar_${S.sessionId}`, JSON.stringify({ anteckningar, tasks: S.tasks }));
     if (synkaFirebase && S.krypteringsNyckel) {
         try {
             const krypteradAnteckningar = await kryptera({ anteckningar, tasks: S.tasks });
-            chrome.runtime.sendMessage({
-                type: "SAVE_ANTECKNINGAR",
-                data: { projektId: S.sessionId, krypteradAnteckningar }
-            });
-        } catch (e) { console.warn("Firebase-sync av anteckningar misslyckades:", e.message); }
+            sparaAnteckningarRemote({ projektId: S.sessionId, krypteradAnteckningar });
+        } catch (e) { console.warn("Backend-sync av anteckningar misslyckades:", e.message); }
     }
 }
 
@@ -133,11 +130,8 @@ async function sparaKällor() {
     if (!S.krypteringsNyckel || !S.sessionId || !S.sessionKällor.length) return;
     try {
         const krypteradeKällor = await kryptera(S.sessionKällor.map(k => ({ ...k, tid: k.tid.toISOString() })));
-        chrome.runtime.sendMessage({
-            type: "SAVE_ANTECKNINGAR",
-            data: { projektId: S.sessionId, krypteradeKällor }
-        });
-    } catch (e) { console.warn("Firebase-sync av källor misslyckades:", e.message); }
+        sparaAnteckningarRemote({ projektId: S.sessionId, krypteradeKällor });
+    } catch (e) { console.warn("Backend-sync av källor misslyckades:", e.message); }
 }
 
 export function renderaKällor() {
@@ -158,7 +152,7 @@ export function renderaKällor() {
         url.className = "käll-url";
         url.textContent = k.url;
         url.title = k.url;
-        url.addEventListener("click", () => chrome.tabs.create({ url: k.url }));
+        url.addEventListener("click", () => window.open(k.url, "_blank"));
         const tid = document.createElement("div");
         tid.style.cssText = "font-size:10px;opacity:0.35;margin-top:2px;";
         tid.textContent = k.tid.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })
@@ -183,7 +177,7 @@ let läsloggTimeout;
 export function renderaLäslogg() {
     const lista = document.getElementById("läslogg-lista");
     if (!lista) return;
-    const log = läslogg;  // from state
+    const log = läslogg;
     if (!log.length) {
         lista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">Klicka 📖 för att lägga till annoterade sidor.</div>`;
         return;
@@ -198,7 +192,7 @@ export function renderaLäslogg() {
         const url = document.createElement("div");
         url.style.cssText = "font-size:10px;opacity:0.5;color:#f0c040;cursor:pointer;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
         url.textContent = e.url;
-        url.addEventListener("click", () => chrome.tabs.create({ url: e.url }));
+        url.addEventListener("click", () => window.open(e.url, "_blank"));
         const sammanfattning = document.createElement("div");
         sammanfattning.style.cssText = "font-size:11px;opacity:0.7;line-height:1.5;margin-bottom:4px;";
         sammanfattning.textContent = e.sammanfattning || "";
@@ -224,11 +218,8 @@ export async function sparaLäslogg() {
     if (!S.krypteringsNyckel || !S.sessionId || !läslogg.length) return;
     try {
         const krypteradLäslogg = await kryptera(läslogg);
-        chrome.runtime.sendMessage({
-            type: "SAVE_ANTECKNINGAR",
-            data: { projektId: S.sessionId, krypteradLäslogg }
-        });
-    } catch (e) { console.warn("Firebase-sync av läslogg misslyckades:", e.message); }
+        sparaAnteckningarRemote({ projektId: S.sessionId, krypteradLäslogg });
+    } catch (e) { console.warn("Backend-sync av läslogg misslyckades:", e.message); }
 }
 
 // ── Logg ───────────────────────────────────────────────────────────────────
@@ -237,10 +228,7 @@ export async function laddaLogg() {
     const loggLista = document.getElementById("logg-lista");
     loggLista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">Hämtar logg…</div>`;
 
-    const svar = await chrome.runtime.sendMessage({
-        type: "GET_MENTOR_LOG",
-        projektId: S.aktivtProjekt?.projektId || S.aktivtProjekt?.id
-    });
+    const svar = await laddaLoggRemote(S.aktivtProjekt?.projektId || S.aktivtProjekt?.id);
 
     if (!svar?.entries?.length) {
         loggLista.innerHTML = `<div style="opacity:0.4;font-size:11px;padding:12px;">${S.t?.mentorIngaLogg || "Inga sparade sessioner ännu"}</div>`;

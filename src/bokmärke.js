@@ -55,9 +55,7 @@ export function sättBokmärke(bubbleIdx, charOffset) {
     }
 
     if (S.sessionId) {
-        chrome.storage.local.set({
-            [S.sessionId]: { namn: S.aktivtProjekt?.namn, fraga: S.aktivtProjekt?.fraga, historik: S.historik, bokmärke: S.bokmärke, kontrastKarta: S.kontrastKarta }
-        });
+        localStorage.setItem(S.sessionId, JSON.stringify({ namn: S.aktivtProjekt?.namn, fraga: S.aktivtProjekt?.fraga, historik: S.historik, bokmärke: S.bokmärke, kontrastKarta: S.kontrastKarta }));
     }
 }
 
@@ -130,9 +128,7 @@ export function initBokmärke() {
 
         clearTimeout(kontrastSparTimer);
         kontrastSparTimer = setTimeout(() => {
-            if (S.sessionId) chrome.storage.local.set({
-                [S.sessionId]: { namn: S.aktivtProjekt?.namn, fraga: S.aktivtProjekt?.fraga, historik: S.historik, bokmärke: S.bokmärke, kontrastKarta: S.kontrastKarta }
-            });
+            if (S.sessionId) localStorage.setItem(S.sessionId, JSON.stringify({ namn: S.aktivtProjekt?.namn, fraga: S.aktivtProjekt?.fraga, historik: S.historik, bokmärke: S.bokmärke, kontrastKarta: S.kontrastKarta }));
         }, 800);
     }, { passive: false });
 

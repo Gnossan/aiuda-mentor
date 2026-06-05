@@ -8,11 +8,12 @@ import { sparaHistorik } from "./session.js";
 import { återställBokmärke, återställKontrast } from "./bokmärke.js";
 import { setLäslogg } from "./state.js";
 import { byggSystemprompt, startaKonversation } from "./chatt.js";
+import { listaProjekt, laddaHistorik, sparaHistorikRemote, raderaProjektRemote } from "./api.js";
 
 // ── Projektlista ───────────────────────────────────────────────────────────
 
 export async function laddaProjektlista() {
-    const svar = await chrome.runtime.sendMessage({ type: "LIST_PROJEKT" });
+    const svar = await listaProjekt();
     const lista = document.getElementById("projekt-liste");
 
     if (!svar?.projekt?.length) {
@@ -115,7 +116,7 @@ async function döpOmProjekt(id, gammaltNamn, fraga) {
     }
     if (S.krypteringsNyckel) {
         const krypteradMetadata = await kryptera({ namn: nyttNamn, fraga });
-        chrome.runtime.sendMessage({ type: "SAVE_HISTORIK", data: { projektId: id, krypteradMetadata } });
+        sparaHistorikRemote({ projektId: id, krypteradMetadata });
     }
     await laddaProjektlista();
 }
@@ -139,7 +140,7 @@ async function raderaProjekt(id, namn) {
     });
 
     if (!bekräftad) return;
-    await chrome.runtime.sendMessage({ type: "DELETE_PROJEKT", projektId: id });
+    await raderaProjektRemote(id);
     if (S.aktivtProjekt?.id === id) {
         S.aktivtProjekt = null;
         S.historik = [];
@@ -193,12 +194,13 @@ export async function öppnaProjekt(projekt) {
     let laddadHistorik = null;
     let laddadFrånFirebase = false;
 
-    const sparadLokal = await chrome.storage.local.get(S.sessionId);
-    S.bokmärke = sparadLokal[S.sessionId]?.bokmärke || null;
-    S.kontrastKarta = sparadLokal[S.sessionId]?.kontrastKarta || {};
+    const sparadLokalRaw = localStorage.getItem(S.sessionId);
+    const sparadLokal = sparadLokalRaw ? JSON.parse(sparadLokalRaw) : {};
+    S.bokmärke = sparadLokal?.bokmärke || null;
+    S.kontrastKarta = sparadLokal?.kontrastKarta || {};
 
     try {
-        const fjärr = await chrome.runtime.sendMessage({ type: "LOAD_HISTORIK", projektId: S.sessionId });
+        const fjärr = await laddaHistorik(S.sessionId);
         if (fjärr?.krypteradHistorik && S.krypteringsNyckel) {
             const dekrypterad = await dekryptera(fjärr.krypteradHistorik);
             if (dekrypterad) { laddadHistorik = dekrypterad; laddadFrånFirebase = true; }
@@ -206,7 +208,7 @@ export async function öppnaProjekt(projekt) {
     } catch {}
 
     if (!laddadHistorik) {
-        laddadHistorik = sparadLokal[S.sessionId]?.historik || null;
+        laddadHistorik = sparadLokal?.historik || null;
     }
 
     if (laddadHistorik?.length > 0) {
@@ -240,10 +242,8 @@ export async function starta() {
     const projektId = "projekt_" + Date.now();
     S.aktivtProjekt = { id: projektId, projektId, namn, fraga };
 
-    chrome.storage.local.set({
-        researchFraga: fraga, researchSessionId: projektId,
-        researchProjektId: projektId, researchProjektNamn: namn, researchAktiv: true
-    });
+    localStorage.setItem('researchFraga', fraga);
+    localStorage.setItem('researchProjektId', projektId);
 
     document.getElementById("ny-fraga-panel").style.display = "none";
     document.getElementById("fraga-input").value = "";

@@ -26,7 +26,7 @@ export function initResizer(resizerId, vänsterEl, högerEl, spara) {
             resizer.classList.remove("dragging");
             document.removeEventListener("mousemove", onMove);
             document.removeEventListener("mouseup", onUp);
-            if (spara) chrome.storage.local.set(spara());
+            if (spara) { const data = spara(); Object.keys(data).forEach(k => localStorage.setItem(k, data[k])); }
         };
 
         document.addEventListener("mousemove", onMove);
@@ -36,15 +36,15 @@ export function initResizer(resizerId, vänsterEl, högerEl, spara) {
 }
 
 export function initResizerFrånStorage() {
-    chrome.storage.local.get(["mentorNavBredd", "mentorHögerBredd"], (result) => {
-        if (result.mentorNavBredd) document.getElementById("nav").style.width = result.mentorNavBredd + "px";
-        if (result.mentorHögerBredd) document.getElementById("höger").style.width = result.mentorHögerBredd + "px";
+    const mentorNavBredd = localStorage.getItem("mentorNavBredd");
+    const mentorHögerBredd = localStorage.getItem("mentorHögerBredd");
+    if (mentorNavBredd) document.getElementById("nav").style.width = mentorNavBredd + "px";
+    if (mentorHögerBredd) document.getElementById("höger").style.width = mentorHögerBredd + "px";
 
-        initResizer("resizer-vänster", document.getElementById("nav"), document.getElementById("chatt"), () => ({
-            mentorNavBredd: document.getElementById("nav").offsetWidth
-        }));
-        initResizer("resizer-höger", document.getElementById("chatt"), document.getElementById("höger"), () => ({
-            mentorHögerBredd: document.getElementById("höger").offsetWidth
-        }));
-    });
+    initResizer("resizer-vänster", document.getElementById("nav"), document.getElementById("chatt"), () => ({
+        mentorNavBredd: document.getElementById("nav").offsetWidth
+    }));
+    initResizer("resizer-höger", document.getElementById("chatt"), document.getElementById("höger"), () => ({
+        mentorHögerBredd: document.getElementById("höger").offsetWidth
+    }));
 }

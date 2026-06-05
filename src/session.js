@@ -5,18 +5,20 @@ import { kryptera } from "./kryptering.js";
 import { laggTillBubbla } from "./ui.js";
 import { läggTillXP } from "./xp.js";
 import { laddaLogg } from "./notat.js";
+import { sparaHistorikRemote, sparaMentorLogg, chat } from "./api.js";
 
 export async function sparaHistorik(synkaFirebase = false) {
     if (!S.sessionId) return;
-    await chrome.storage.local.set({
-        [S.sessionId]: { namn: S.aktivtProjekt?.namn, fraga: S.aktivtProjekt?.fraga, historik: S.historik, bokmärke: S.bokmärke, kontrastKarta: S.kontrastKarta }
-    });
+    localStorage.setItem(S.sessionId, JSON.stringify({
+        namn: S.aktivtProjekt?.namn, fraga: S.aktivtProjekt?.fraga,
+        historik: S.historik, bokmärke: S.bokmärke, kontrastKarta: S.kontrastKarta
+    }));
     if (synkaFirebase && S.krypteringsNyckel) {
         try {
             const krypteradHistorik = await kryptera(S.historik);
             const krypteradMetadata = await kryptera({ namn: S.aktivtProjekt?.namn || "", fraga: S.aktivtProjekt?.fraga || "" });
-            chrome.runtime.sendMessage({ type: "SAVE_HISTORIK", data: { projektId: S.sessionId, krypteradHistorik, krypteradMetadata } });
-        } catch (e) { console.warn("Firebase-sync misslyckades:", e.message); }
+            sparaHistorikRemote({ projektId: S.sessionId, krypteradHistorik, krypteradMetadata });
+        } catch (e) { console.warn("Backend-sync misslyckades:", e.message); }
     }
 }
 
@@ -51,7 +53,7 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
         { role: "user", content: summaryPrompt }
     ];
 
-    const svar = await chrome.runtime.sendMessage({ type: "CHAT", systemprompt: S.systemprompt, historik: summaryHistorik });
+    const svar = await chat(S.systemprompt, summaryHistorik);
     const rawText = svar?.result?.content?.[0]?.text || "";
 
     let parsed = {};
@@ -83,7 +85,7 @@ Rules: sammanfattning in conversation language, max 5 insikter, only real URLs, 
         krypterat: krypteratInnehåll
     };
 
-    const resultat = await chrome.runtime.sendMessage({ type: "SAVE_MENTOR_LOG", entry });
+    const resultat = await sparaMentorLogg(entry);
 
     if (resultat?.id) {
         sparaKnapp.textContent = "✓";
