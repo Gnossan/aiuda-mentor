@@ -1,4 +1,5 @@
 // src/highlight.js — highlight-verktyg i chattbubblor + orduppslagning
+import DOMPurify from "dompurify";
 
 import { S } from "./state.js";
 import { sparaAnteckningarOchTasks } from "./notat.js";

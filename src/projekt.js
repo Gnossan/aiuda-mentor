@@ -9,6 +9,7 @@ import { återställBokmärke, återställKontrast } from "./bokmärke.js";
 import { setLäslogg } from "./state.js";
 import { byggSystemprompt, startaKonversation } from "./chatt.js";
 import { listaProjekt, laddaHistorik, sparaHistorikRemote, raderaProjektRemote } from "./api.js";
+import DOMPurify from "dompurify";
 
 // ── Projektlista ───────────────────────────────────────────────────────────
 
