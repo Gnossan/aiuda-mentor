@@ -1,6 +1,8 @@
 // src/ui.js — bubbel- och UI-hjälpfunktioner
 
 import { S } from "./state.js";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
 
 export function formateraBubblaTid(iso) {
     if (!iso) return "";
