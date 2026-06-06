@@ -341,6 +341,19 @@ document.getElementById("tema-knapp").addEventListener("click", () => {
     localStorage.setItem("tema", tema);
 });
 
+// ── Stripe återvändo ───────────────────────────────────────────────────────
+
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("kop") === "ok") {
+    history.replaceState({}, "", window.location.pathname);
+    // Visa bekräftelse
+    const banner = document.createElement("div");
+    banner.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#2a3d1a;border:1px solid #5a8a3a;border-radius:6px;padding:10px 20px;font-family:'DM Mono',monospace;font-size:12px;color:#a0e070;z-index:9999;";
+    banner.textContent = "✓ Betalning mottagen — 1 000 000 tokens tillagda";
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 5000);
+}
+
 // ── Initiera subsystem ─────────────────────────────────────────────────────
 
 initBokmärke();

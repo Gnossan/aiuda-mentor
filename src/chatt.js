@@ -6,7 +6,7 @@ import { sparaHistorik } from "./session.js";
 import { läggTillXP } from "./xp.js";
 import { läggTillKälla, extraheraKällorFrånText, sparaAnteckningarOchTasks, laddaLogg } from "./notat.js";
 import { läslogg, setLäslogg } from "./state.js";
-import { chat, sök } from "./api.js";
+import { chat, sök, startaCheckout } from "./api.js";
 
 // ── Systemprompt ───────────────────────────────────────────────────────────
 
@@ -26,13 +26,54 @@ Always respond in the same language as the user's message.`;
 
 // ── AI-svar-hantering ──────────────────────────────────────────────────────
 
+export function visaKöpDialog() {
+    if (document.getElementById("köp-dialog")) return;
+    const dialog = document.createElement("div");
+    dialog.id = "köp-dialog";
+    dialog.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;";
+    dialog.innerHTML = `
+        <div style="background:#1a1610;border:1px solid #444;border-radius:10px;padding:28px;width:320px;font-family:'DM Mono',monospace;color:#f5f0e8;line-height:1.7;">
+            <div style="font-size:16px;font-weight:600;margin-bottom:10px;">Tokensaldo slut</div>
+            <p style="font-size:12px;opacity:0.75;margin-bottom:20px;">
+                Fyll på med 1&nbsp;000&nbsp;000 tokens för <strong>99&nbsp;kr</strong>.
+                Tokens förfaller inte — använd i din egen takt.
+            </p>
+            <button id="köp-knapp" style="width:100%;padding:12px;background:#f0c040;color:#1a1610;border:none;border-radius:6px;cursor:pointer;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;margin-bottom:8px;">
+                Köp 1M tokens — 99 kr →
+            </button>
+            <button id="köp-stäng" style="width:100%;padding:8px;background:transparent;color:#f5f0e8;border:1px solid #444;border-radius:6px;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;">
+                Avbryt
+            </button>
+        </div>`;
+    document.body.appendChild(dialog);
+
+    document.getElementById("köp-knapp").addEventListener("click", async () => {
+        const knapp = document.getElementById("köp-knapp");
+        knapp.textContent = "⏳ Förbereder betalning…";
+        knapp.disabled = true;
+        const svar = await startaCheckout("mentor_tokens_1m");
+        if (svar?.url) {
+            window.location.href = svar.url;
+        } else {
+            knapp.textContent = "Något gick fel — försök igen";
+            knapp.disabled = false;
+        }
+    });
+
+    document.getElementById("köp-stäng").addEventListener("click", () => dialog.remove());
+}
+
 export function tolkSvar(svar) {
-    if (svar?.error === "quota_exceeded") return "Du har använt alla krediter för denna månad.";
+    if (svar?.error === "tomt_saldo" || svar?.error === "quota_exceeded") {
+        visaKöpDialog();
+        return null; // signalerar att inget ska visas i chatten
+    }
     return svar?.result?.content?.[0]?.text || "Något gick fel.";
 }
 
 export async function hanteraAISvar(svar, tänker) {
     let assistantText = tolkSvar(svar);
+    if (assistantText === null) { tänker.remove(); return null; }
     const searchMatch = assistantText.match(/\[SEARCH:\s*(.+?)\]/);
     if (searchMatch) {
         const query = searchMatch[1].trim();

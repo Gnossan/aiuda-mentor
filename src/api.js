@@ -104,3 +104,21 @@ export async function laddaLoggRemote(projektId, sessionId) {
 export async function hämtaReaderAnnotation(url) {
     return anropa(`/api/page-annotation?url=${encodeURIComponent(url)}`, { method: 'GET' })
 }
+
+// ── Stripe checkout — köp tokens ───────────────────────────────────────────
+
+const READER_BACKEND = 'https://annotated-reader-backend.vercel.app'
+
+export async function startaCheckout(produkt = 'mentor_tokens_1m') {
+    const token = await hämtaToken()
+    if (!token) return { error: 'Ej inloggad' }
+    const resp = await fetch(`${READER_BACKEND}/api/checkout`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ produkt })
+    })
+    return resp.json()
+}
