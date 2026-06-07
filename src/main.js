@@ -14,6 +14,7 @@ import { laddaProjektlista, öppnaProjekt, starta } from "./projekt.js";
 import { byggSystemprompt, skicka, initQuiz, initAvbryt } from "./chatt.js";
 import { läslogg, setLäslogg } from "./state.js";
 import { hämtaReaderAnnotation } from "./api.js";
+import { initSaldoVisning, uppdateraSaldoVisning } from "./saldo.js";
 
 // Registrera laggTillBubbla så kryptering.js kan använda det
 registreraLaggTillBubbla(laggTillBubbla);
@@ -64,6 +65,7 @@ onAuth(async (user) => {
 
     await laddaEllerSkapaNyckel(user.email);
     await laddaProjektlista();
+    initSaldoVisning();
 });
 
 document.getElementById("login-knapp")?.addEventListener("click", () => loggaIn());
@@ -303,6 +305,7 @@ if (urlParams.get("kop") === "ok") {
     banner.textContent = "✓ Betalning mottagen — 1 000 000 tokens tillagda";
     document.body.appendChild(banner);
     setTimeout(() => banner.remove(), 5000);
+    setTimeout(uppdateraSaldoVisning, 4000); // ge webhooken tid att kreditera
 }
 
 // ── Initiera subsystem ─────────────────────────────────────────────────────

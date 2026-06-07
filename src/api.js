@@ -109,6 +109,10 @@ export async function hämtaReaderAnnotation(url) {
 
 const READER_BACKEND = 'https://annotated-reader-backend.vercel.app'
 
+export async function hämtaSaldo() {
+    return anropa('/api/saldo', { method: 'GET' })
+}
+
 export async function startaCheckout(produkt = 'mentor_tokens_1m') {
     try {
         const token = await hämtaToken()

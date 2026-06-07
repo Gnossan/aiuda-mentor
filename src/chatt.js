@@ -7,6 +7,7 @@ import { läggTillXP } from "./xp.js";
 import { läggTillKälla, extraheraKällorFrånText, sparaAnteckningarOchTasks, laddaLogg } from "./notat.js";
 import { läslogg, setLäslogg } from "./state.js";
 import { chat, sök, startaCheckout } from "./api.js";
+import { uppdateraSaldoVisning } from "./saldo.js";
 
 // ── Systemprompt ───────────────────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ export function tolkSvar(svar) {
 export async function hanteraAISvar(svar, tänker) {
     let assistantText = tolkSvar(svar);
     if (assistantText === null) { tänker.remove(); return null; }
+    uppdateraSaldoVisning();
     const searchMatch = assistantText.match(/\[SEARCH:\s*(.+?)\]/);
     if (searchMatch) {
         const query = searchMatch[1].trim();
