@@ -110,15 +110,19 @@ export async function hämtaReaderAnnotation(url) {
 const READER_BACKEND = 'https://annotated-reader-backend.vercel.app'
 
 export async function startaCheckout(produkt = 'mentor_tokens_1m') {
-    const token = await hämtaToken()
-    if (!token) return { error: 'Ej inloggad' }
-    const resp = await fetch(`${READER_BACKEND}/api/checkout`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ produkt })
-    })
-    return resp.json()
+    try {
+        const token = await hämtaToken()
+        if (!token) return { error: 'Ej inloggad' }
+        const resp = await fetch(`${READER_BACKEND}/api/checkout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ produkt })
+        })
+        return await resp.json()
+    } catch (e) {
+        return { error: e.message || 'Nätverksfel' }
+    }
 }
